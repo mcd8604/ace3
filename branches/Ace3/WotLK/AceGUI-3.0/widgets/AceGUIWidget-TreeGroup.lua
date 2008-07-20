@@ -183,11 +183,11 @@ do
 		local line = button.line
 		button.level = level
 		if ( level == 1 ) then
-			button:SetTextFontObject("GameFontNormal")
+			button:SetNormalFontObject("GameFontNormal")
 			button:SetHighlightFontObject("GameFontHighlight")
 			button.text:SetPoint("LEFT", 8, 2)
 		else
-			button:SetTextFontObject("GameFontHighlightSmall")
+			button:SetNormalFontObject("GameFontHighlightSmall")
 			button:SetHighlightFontObject("GameFontHighlightSmall")
 			button.text:SetPoint("LEFT", 8 * level, 2)
 		end
