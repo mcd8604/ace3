@@ -711,7 +711,7 @@ function lib:CreateChatCommand(slashcmd, appName)
 	if not AceConsole then
 		AceConsole = LibStub(AceConsoleName)
 	end
-	if AceConsole.RegisterChatCommand(self, slashcmd, function(input)
+	if AceConsole.RegisterChatCommand(self, slashcmd, function(_, input)
 				lib.HandleCommand(self, slashcmd, appName, input)	-- upgradable
 		end,
 	true) then -- succesfully registered so lets get the command -> app table in
