@@ -55,7 +55,7 @@ function AceConsole:RegisterChatCommand( command, func, persist )
 	local name = "ACECONSOLE_"..command:upper()
 	
 	if type( func ) == "string" then
-		SlashCmdList[name] = function(_, input)
+		SlashCmdList[name] = function(input)
 			self[func](self, input)
 		end
 	else
