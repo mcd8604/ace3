@@ -27,7 +27,7 @@ end
 
 do
 	local Type = "TreeGroup"
-	local Version = 13
+	local Version = 14
 	
 	local DEFAULT_TREE_WIDTH = 175
 	local DEFAULT_TREE_SIZABLE = true

@@ -30,7 +30,7 @@ local AceGUI = LibStub("AceGUI-3.0")
 
 do
 	local Type = "TabGroup"
-	local Version = 14
+	local Version = 15
 
 	local PaneBackdrop  = {
 		bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
