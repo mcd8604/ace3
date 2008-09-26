@@ -1,5 +1,5 @@
 --[[ $Id$ ]]
-local MAJOR, MINOR = "AceEvent-3.0", 3
+local MAJOR, MINOR = "AceEvent-3.0", 2
 local AceEvent = LibStub:NewLibrary(MAJOR, MINOR)
 
 if not AceEvent then return end
@@ -12,19 +12,15 @@ AceEvent.embeds = AceEvent.embeds or {} -- what objects embed this lib
 
 
 -- APIs and registry for blizzard events, using CallbackHandler lib
+local OnEventUsed, OnEventUnused
+
 if not AceEvent.events then
 	AceEvent.events = CallbackHandler:New(AceEvent, 
-		"RegisterEvent", "UnregisterEvent", "UnregisterAllEvents")
+		"RegisterEvent", "UnregisterEvent", "UnregisterAllEvents",
+		--[[OnUsed]]   function(self,eventname) self.frame:RegisterEvent(eventname) end,
+		--[[OnUnused]] function(self,eventname) self.frame:UnregisterEvent(eventname) end
+	)
 end
-
-function AceEvent.events:OnUsed(target, eventname) 
-	AceEvent.frame:RegisterEvent(eventname)
-end
-
-function AceEvent.events:OnUnused(target, eventname) 
-	AceEvent.frame:UnregisterEvent(eventname)
-end
-
 
 -- APIs and registry for IPC messages, using CallbackHandler lib
 if not AceEvent.messages then
@@ -51,7 +47,6 @@ function AceEvent:Embed(target)
 		target[v] = self[v]
 	end
 	self.embeds[target] = true
-	return target
 end
 
 -- AceEvent:OnEmbedDisable( target )

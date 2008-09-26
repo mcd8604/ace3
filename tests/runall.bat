@@ -4,7 +4,7 @@ echo Running all -?.x test cases:
 echo.
 
 setlocal
-if _%lua%_==__ set lua=lua
+if "%lua%"=="" set lua=lua
 
 for %%i in (*-?.*.lua) do call :runtest %%i
 

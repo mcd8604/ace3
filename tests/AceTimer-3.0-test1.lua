@@ -8,7 +8,7 @@ local MAJOR = "AceTimer-3.0"
 dofile("../"..MAJOR.."/"..MAJOR..".lua")
 
 local AceTimer,minor = LibStub:GetLibrary(MAJOR)
-_G.AceTimer=AceTimer
+
 
 -----------------------------------------------------------------------
 -- Test embedding
@@ -134,7 +134,7 @@ WoWAPI_FireUpdate(6.5)
 assert(t1s==0 and t2s==0 and t3s==0 and t4s==0 and t5s==0 and t6s==0)
 
 WoWAPI_FireUpdate(7.7)
-assert(t1s==1 and t2s==0 and t3s==0 and t4s==0 and t5s==0 and t6s==1, dump(t1s,t2s,t3s,t4s,t5s,t6s))
+assert(t1s==1 and t2s==0 and t3s==0 and t4s==0 and t5s==0 and t6s==1)
 
 WoWAPI_FireUpdate(9.8)
 assert(t1s==2 and t2s==1 and t3s==1 and t4s==0 and t5s==0 and t6s==1)	-- NOTE: t1s will only fire ONCE now, since we had a >1.99s lag!
@@ -148,7 +148,7 @@ assert(t1s==2 and t2s==1 and t3s==1 and t4s==0 and t5s==0 and t6s==1)	-- NOTE: t
 
 t1s, t2s, t3s, t4s, t5s, t6s = 0,0,0,0,0,0
 
-assert(not AceTimer:CancelTimer(timer1, true))	-- wrong self, shouldnt cancel anything
+assert(not AceTimer:CancelTimer(timer1))	-- wrong self, shouldnt cancel anything
 
 assert(obj:CancelTimer(timer1))	-- right self - cancel timer1
 
@@ -174,23 +174,13 @@ t1s, t2s, t3s, t4s, t5s = 0,0,0,0,0
 
 obj:CancelAllTimers()
 
-local i = 17
-local e = i + AceTimer.debug.BUCKETS / AceTimer.debug.HZ * 5	-- 5 full loops of all buckets
-while i < e do
-	i=i+math.random()
+for i=17,120,0.2 do		-- 131 buckets / 11 = 11.9 seconds for a full loop
 	WoWAPI_FireUpdate(i) -- long time in the future
 end
 assert(t1s==0 and t2s==0 and t3s==0 and t4s==0 and t5s==0 and t6s==0)	-- nothing should have fired
 
 
------------------------------------------------------------------------
---
 
-for i=1,AceTimer.debug.BUCKETS do
-	if AceTimer.hash[i]~=false then
-		error("AceTimer.hash["..i.."] was '"..tostring(AceTimer.hash[i]).."' - expected false")
-	end
-end
 
 -----------------------------------------------------------------------
 

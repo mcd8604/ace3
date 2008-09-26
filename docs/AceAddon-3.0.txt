@@ -72,7 +72,7 @@ Returns an iterator over all embedded libraries in the passed addon.
 AceAddon:IterateAddonStatus()
 Returns an iterator over all addons and their status [name] => [status]
 
-AceAddon:IterateModulesOfAddon( addon )
+AceADdon:IterateModulesOfAddon( addon )
 Returns an iterator over all modules of an addon. [name] => [moduleobject]
 
 
@@ -92,28 +92,6 @@ addon:NewModule( name, [prototype, [lib, lib, lib, ...] )
 returns the addon object when succesful
 Modules of an AceAddon are AceAddon objects themselves and thus have the same API.
 
-addon:Enable()
-Enables the addon and returns true or false depending on success
-If the addon is already enabled this will return false
-
-addon:Disable()
-Disables teh addon and returns true or false depending on success
-If the addon is already disabled this will return false
-
-addon:EnableModule( name )
-	name (string) - unique module object name to enable
-returns true or false depending on success
-	
-addon:DisableModule( name )
-	name (string) - unique module object name to disable
-returns true or false depending on success
-
-addon:IsEnabled()
-return true or false depending on wether the addon is enabled or not.
-
-addon:IsModule()
-returns true or false depending on wether the addon is a module or not.
-
 
 addon:SetDefaultModuleLibraries( [lib, lib, lib, ...]  )
 	[lib] (string) - libs to embed in every module
@@ -122,8 +100,6 @@ addon:SetDefaultModuleLibraries( [lib, lib, lib, ...]  )
 addon:SetDefaultModuleState( state )
 	state (boolean) - default state for new modules (enabled=true, disabled=false)
 
-addon:SetDefaultModulePrototype( prototype )
-	prototype (table) - default prototype to use for modules.
 
 addon:SetEnabledState ( state )
 	state ( boolean ) - set the state of an addon or module  (enabled=true, disabled=false)

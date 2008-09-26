@@ -1,12 +1,45 @@
 local AceGUI = LibStub("AceGUI-3.0")
 
+---------------------
+-- Common Elements --
+---------------------
+
+local FrameBackdrop = {
+	bgFile="Interface\\DialogFrame\\UI-DialogBox-Background",
+	edgeFile="Interface\\DialogFrame\\UI-DialogBox-Border", 
+	tile = true, tileSize = 32, edgeSize = 32, 
+	insets = { left = 8, right = 8, top = 8, bottom = 8 }
+}
+
+local PaneBackdrop  = {
+
+	bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+	edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+	tile = true, tileSize = 16, edgeSize = 16,
+	insets = { left = 3, right = 3, top = 5, bottom = 3 }
+}
+
+local ControlBackdrop  = {
+	bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+	edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+	tile = true, tileSize = 16, edgeSize = 16,
+	insets = { left = 3, right = 3, top = 3, bottom = 3 }
+}
+
+local function Control_OnEnter(this)
+	this.obj:Fire("OnEnter")
+end
+
+local function Control_OnLeave(this)
+	this.obj:Fire("OnLeave")
+end
 
 -------------
 -- Widgets --
 -------------
 --[[
 	Widgets must provide the following functions
-		Acquire() - Called when the object is aquired, should set everything to a default hidden state
+		Aquire() - Called when the object is aquired, should set everything to a default hidden state
 		Release() - Called when the object is Released, should remove any anchors and hide the Widget
 		
 	And the following members
@@ -35,24 +68,15 @@ local AceGUI = LibStub("AceGUI-3.0")
 
 do
 	local Type = "InlineGroup"
-	local Version = 4
 	
-	local function OnAcquire(self)
-		self:SetWidth(300)
-		self:SetHeight(100)
+	local function Aquire(self)
+
 	end
 	
-	local function OnRelease(self)
+	local function Release(self)
 		self.frame:ClearAllPoints()
 		self.frame:Hide()
 	end
-
-	local PaneBackdrop  = {
-		bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
-		edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-		tile = true, tileSize = 16, edgeSize = 16,
-		insets = { left = 3, right = 3, top = 5, bottom = 3 }
-	}
 	
 	local function SetTitle(self,title)
 		self.titletext:SetText(title)
@@ -60,48 +84,26 @@ do
 
 
 	local function LayoutFinished(self, width, height)
-		self:SetHeight((height or 0) + 40)
+		self.frame:SetHeight((height or 0) + 40)
 	end
 	
-	local function OnWidthSet(self, width)
-		local content = self.content
-		local contentwidth = width - 20
-		if contentwidth < 0 then
-			contentwidth = 0
-		end
-		content:SetWidth(contentwidth)
-		content.width = contentwidth
-	end
-	
-	
-	local function OnHeightSet(self, height)
-		local content = self.content
-		local contentheight = height - 20
-		if contentheight < 0 then
-			contentheight = 0
-		end
-		content:SetHeight(contentheight)
-		content.height = contentheight
-	end
 	
 	local function Constructor()
 		local frame = CreateFrame("Frame",nil,UIParent)
 		local self = {}
 		self.type = Type
 
-		self.OnRelease = OnRelease
-		self.OnAcquire = OnAcquire
+		self.Release = Release
+		self.Aquire = Aquire
 		self.SetTitle = SetTitle
 		self.frame = frame
 		self.LayoutFinished = LayoutFinished
-		self.OnWidthSet = OnWidthSet
-		self.OnHeightSet = OnHeightSet
 		
 		frame.obj = self
 		
 		frame:SetHeight(100)
 		frame:SetWidth(100)
-		frame:SetFrameStrata("FULLSCREEN_DIALOG")
+		frame:SetFrameStrata("DIALOG")
 		
 		local titletext = frame:CreateFontString(nil,"OVERLAY","GameFontNormal")
 		titletext:SetPoint("TOPLEFT",frame,"TOPLEFT",14,0)
@@ -109,6 +111,7 @@ do
 		titletext:SetJustifyH("LEFT")
 		titletext:SetHeight(18)
 		
+	
 		self.titletext = titletext	
 		
 		local border = CreateFrame("Frame",nil,frame)
@@ -131,5 +134,5 @@ do
 		return self
 	end
 	
-	AceGUI:RegisterWidgetType(Type,Constructor,Version)
+	AceGUI:RegisterWidgetType(Type,Constructor)
 end

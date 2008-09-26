@@ -9,7 +9,7 @@
 		stopped, and the bucket is only listening for the next event to happen, basicly back in initial state.
 ]]
 
-local MAJOR, MINOR = "AceBucket-3.0", 3
+local MAJOR, MINOR = "AceBucket-3.0", 0
 local AceBucket, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
 
 if not AceBucket then return end -- No Upgrade needed
@@ -21,57 +21,16 @@ AceBucket.embeds = AceBucket.embeds or {}
 local AceEvent, AceTimer
 
 -- local upvalues
-local type = type
-local next = next
+local pcall = pcall
 local pairs = pairs
-local select = select
-local tonumber = tonumber
-local tostring = tostring
 
 local bucketCache = setmetatable({}, {__mode='k'})
 
---[[
-	 xpcall safecall implementation
-]]
-local xpcall = xpcall
-
-local function errorhandler(err)
-	return geterrorhandler()(err)
-end
-
-local function CreateDispatcher(argCount)
-	local code = [[
-		local xpcall, eh = ...
-		local method, ARGS
-		local function call() return method(ARGS) end
-	
-		local function dispatch(func, ...)
-			 method = func
-			 if not method then return end
-			 ARGS = ...
-			 return xpcall(call, eh)
-		end
-	
-		return dispatch
-	]]
-	
-	local ARGS = {}
-	for i = 1, argCount do ARGS[i] = "arg"..i end
-	code = code:gsub("ARGS", table.concat(ARGS, ", "))
-	return assert(loadstring(code, "safecall Dispatcher["..argCount.."]"))(xpcall, errorhandler)
-end
-
-local Dispatchers = setmetatable({}, {__index=function(self, argCount)
-	local dispatcher = CreateDispatcher(argCount)
-	rawset(self, argCount, dispatcher)
-	return dispatcher
-end})
-Dispatchers[0] = function(func)
-	return xpcall(func, errorhandler)
-end
- 
 local function safecall(func, ...)
-	return Dispatchers[select('#', ...)](func, ...)
+	local success, err = pcall(func, ...)
+	if success then return err end
+	if not err:find("%.lua:%d+:") then err = (debugstack():match("\n(.-: )in.-\n") or "") .. err end 
+	geterrorhandler()(err)
 end
 
 -- FireBucket ( bucket )
@@ -134,15 +93,8 @@ local function RegisterBucket(self, event, interval, callback, isMessage)
 	end
 	
 	if type(event) ~= "string" and type(event) ~= "table" then error("Usage: RegisterBucket(event, interval, callback): 'event' - string or table expected.", 3) end
-	if not callback then
-		if type(event) == "string" then
-			callback = event
-		else
-			error("Usage: RegisterBucket(event, interval, callback): cannot omit callback when event is not a string.", 3)
-		end
-	end
 	if not tonumber(interval) then error("Usage: RegisterBucket(event, interval, callback): 'interval' - number expected.", 3) end
-	if type(callback) ~= "string" and type(callback) ~= "function" then error("Usage: RegisterBucket(event, interval, callback): 'callback' - string or function or nil expected.", 3) end
+	if type(callback) ~= "string" and type(callback) ~= "function" then error("Usage: RegisterBucket(event, interval, callback): 'callback' - string or function expected.", 3) end
 	if type(callback) == "string" and type(self[callback]) ~= "function" then error("Usage: RegisterBucket(event, interval, callback): 'callback' - method not found on target object.", 3) end
 	
 	local bucket = next(bucketCache)
@@ -200,28 +152,13 @@ function AceBucket:UnregisterBucket(handle)
 		
 		if bucket.timer then
 			AceTimer.CancelTimer(bucket, bucket.timer)
-			bucket.timer = nil
 		end
 		
-		AceBucket.buckets[handle] = nil
+		AceBucket.buckts[handle] = nil
 		-- store our bucket in the cache
 		bucketCache[bucket] = true
 	end
 end
-
--- AceBucket:UnregisterAllBuckets()
--- 
--- will unregister all bucketed events.
-function AceBucket:UnregisterAllBuckets()
-	-- hmm can we do this more efficient? (it is not done often so shouldn't matter much)
-	for handle, bucket in pairs(AceBucket.buckets) do
-		if bucket.object == self then
-			AceBucket.UnregisterBucket(self, handle)
-		end
-	end
-end
-
-
 
 --- embedding and embed handling
 
@@ -229,7 +166,6 @@ local mixins = {
 	"RegisterBucketEvent",
 	"RegisterBucketMessage", 
 	"UnregisterBucket",
-	"UnregisterAllBuckets",
 } 
 
 -- AceBucket:Embed( target )
@@ -241,15 +177,6 @@ function AceBucket:Embed( target )
 		target[v] = self[v]
 	end
 	self.embeds[target] = true
-	return target
-end
-
---AceBucket:OnEmbedDisable( target )
--- target (object) - target object that AceBucket is embedded in.
---
--- Disables all buckets registered on the object
-function AceBucket:OnEmbedDisable( target )
-	target:UnregisterAllBuckets()
 end
 
 for addon in pairs(AceBucket.embeds) do

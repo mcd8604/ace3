@@ -1,5 +1,63 @@
 local AceGUI = LibStub("AceGUI-3.0")
 
+---------------------
+-- Common Elements --
+---------------------
+
+local FrameBackdrop = {
+	bgFile="Interface\\DialogFrame\\UI-DialogBox-Background",
+	edgeFile="Interface\\DialogFrame\\UI-DialogBox-Border", 
+	tile = true, tileSize = 32, edgeSize = 32, 
+	insets = { left = 8, right = 8, top = 8, bottom = 8 }
+}
+
+local PaneBackdrop  = {
+
+	bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+	edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+	tile = true, tileSize = 16, edgeSize = 16,
+	insets = { left = 3, right = 3, top = 5, bottom = 3 }
+}
+
+local ControlBackdrop  = {
+	bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+	edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+	tile = true, tileSize = 16, edgeSize = 16,
+	insets = { left = 3, right = 3, top = 3, bottom = 3 }
+}
+
+local function Control_OnEnter(this)
+	this.obj:Fire("OnEnter")
+end
+
+local function Control_OnLeave(this)
+	this.obj:Fire("OnLeave")
+end
+
+-------------
+-- Widgets --
+-------------
+--[[
+	Widgets must provide the following functions
+		Aquire() - Called when the object is aquired, should set everything to a default hidden state
+		Release() - Called when the object is Released, should remove any anchors and hide the Widget
+		
+	And the following members
+		frame - the frame or derivitive object that will be treated as the widget for size and anchoring purposes
+		type - the type of the object, same as the name given to :RegisterWidget()
+		
+	Widgets contain a table called userdata, this is a safe place to store data associated with the wigdet
+	It will be cleared automatically when a widget is released
+	Placing values directly into a widget object should be avoided
+	
+	If the Widget can act as a container for other Widgets the following
+		content - frame or derivitive that children will be anchored to
+		
+	The Widget can supply the following Optional Members
+
+
+]]
+
 ----------------
 -- Main Frame --
 ----------------
@@ -9,25 +67,19 @@ local AceGUI = LibStub("AceGUI-3.0")
 
 ]]
 do
-	local Type = "Frame"
-	local Version = 7
-
-	local FrameBackdrop = {
-		bgFile="Interface\\DialogFrame\\UI-DialogBox-Background",
-		edgeFile="Interface\\DialogFrame\\UI-DialogBox-Border", 
-		tile = true, tileSize = 32, edgeSize = 32, 
-		insets = { left = 8, right = 8, top = 8, bottom = 8 }
-	}
-
-	local PaneBackdrop  = {
-		bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
-		edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-		tile = true, tileSize = 16, edgeSize = 16,
-		insets = { left = 3, right = 3, top = 5, bottom = 3 }
-	}
-
 	local function frameOnClose(this)
-		this.obj:Fire("OnClose")
+		local self = this.obj
+		self:Fire("OnClose")
+	end
+	
+	local function frameOnSizeChanged(this)
+		local self = this.obj
+		local status = self.status or self.localstatus
+		
+		status.width = this:GetWidth()
+		status.height = this:GetHeight()
+		status.top = this:GetTop()
+		status.left = this:GetLeft()
 	end
 	
 	local function closeOnClick(this)
@@ -35,12 +87,7 @@ do
 	end
 	
 	local function frameOnMouseDown(this)
-		AceGUI:ClearFocus()
-	end
-	
-	local function titleOnMouseDown(this)
 		this:GetParent():StartMoving()
-		AceGUI:ClearFocus()
 	end
 	
 	local function frameOnMouseUp(this)
@@ -56,21 +103,18 @@ do
 	
 	local function sizerseOnMouseDown(this)
 		this:GetParent():StartSizing("BOTTOMRIGHT")
-		AceGUI:ClearFocus()
 	end
 	
 	local function sizersOnMouseDown(this)
 		this:GetParent():StartSizing("BOTTOM")
-		AceGUI:ClearFocus()
 	end
 	
 	local function sizereOnMouseDown(this)
 		this:GetParent():StartSizing("RIGHT")
-		AceGUI:ClearFocus()
 	end
 	
 	local function sizerOnMouseUp(this)
-		this:GetParent():StopMovingOrSizing()
+		this:GetParent():StopMovingOrSizing() 
 	end
 
 	local function SetTitle(self,title)
@@ -89,13 +133,12 @@ do
 		self.frame:Show()
 	end
 	
-	local function OnAcquire(self)
+	local function Aquire(self)
 		self.frame:SetParent(UIParent)
-		self.frame:SetFrameStrata("FULLSCREEN_DIALOG")
 		self:ApplyStatus()
 	end
 	
-	local function OnRelease(self)
+	local function Release(self)
 		self.status = nil
 		for k in pairs(self.localstatus) do
 			self.localstatus[k] = nil
@@ -112,8 +155,8 @@ do
 	local function ApplyStatus(self)
 		local status = self.status or self.localstatus
 		local frame = self.frame
-		self:SetWidth(status.width or 700)
-		self:SetHeight(status.height or 500)
+		frame:SetWidth(status.width or 700)
+		frame:SetHeight(status.height or 500)
 		if status.top and status.left then
 			frame:SetPoint("TOP",UIParent,"BOTTOM",0,status.top)
 			frame:SetPoint("LEFT",UIParent,"LEFT",status.left,0)
@@ -121,28 +164,7 @@ do
 			frame:SetPoint("CENTER",UIParent,"CENTER")
 		end
 	end
-	
-	local function OnWidthSet(self, width)
-		local content = self.content
-		local contentwidth = width - 34
-		if contentwidth < 0 then
-			contentwidth = 0
-		end
-		content:SetWidth(contentwidth)
-		content.width = contentwidth
-	end
-	
-	
-	local function OnHeightSet(self, height)
-		local content = self.content
-		local contentheight = height - 57
-		if contentheight < 0 then
-			contentheight = 0
-		end
-		content:SetHeight(contentheight)
-		content.height = contentheight
-	end
-	
+
 	local function Constructor()
 		local frame = CreateFrame("Frame",nil,UIParent)
 		local self = {}
@@ -151,13 +173,11 @@ do
 		self.Hide = Hide
 		self.Show = Show
 		self.SetTitle =  SetTitle
-		self.OnRelease = OnRelease
-		self.OnAcquire = OnAcquire
+		self.Release = Release
+		self.Aquire = Aquire
 		self.SetStatusText = SetStatusText
 		self.SetStatusTable = SetStatusTable
 		self.ApplyStatus = ApplyStatus
-		self.OnWidthSet = OnWidthSet
-		self.OnHeightSet = OnHeightSet
 		
 		self.localstatus = {}
 		
@@ -169,14 +189,13 @@ do
 		frame:EnableMouse()
 		frame:SetMovable(true)
 		frame:SetResizable(true)
-		frame:SetFrameStrata("FULLSCREEN_DIALOG")
-		frame:SetScript("OnMouseDown", frameOnMouseDown)
+		frame:SetFrameStrata("DIALOG")
 		
 		frame:SetBackdrop(FrameBackdrop)
 		frame:SetBackdropColor(0,0,0,1)
 		frame:SetScript("OnHide",frameOnClose)
 		frame:SetMinResize(400,200)
-		frame:SetToplevel(true)
+		frame:SetScript("OnSizeChanged", frameOnSizeChanged)
 		
 		local closebutton = CreateFrame("Button",nil,frame,"UIPanelButtonTemplate")
 		closebutton:SetScript("OnClick", closeOnClick)
@@ -208,7 +227,7 @@ do
 		local title = CreateFrame("Frame",nil,frame)
 		self.title = title
 		title:EnableMouse()
-		title:SetScript("OnMouseDown",titleOnMouseDown)
+		title:SetScript("OnMouseDown",frameOnMouseDown)
 		title:SetScript("OnMouseUp", frameOnMouseUp)
 		
 		
@@ -284,6 +303,7 @@ do
 		sizer_e:SetScript("OnMouseUp", sizerOnMouseUp)
 		self.sizer_e = sizer_e
 	
+	
 		--Container Support
 		local content = CreateFrame("Frame",nil,frame)
 		self.content = content
@@ -295,5 +315,5 @@ do
 		return self	
 	end
 	
-	AceGUI:RegisterWidgetType(Type,Constructor,Version)
+	AceGUI:RegisterWidgetType("Frame",Constructor)
 end

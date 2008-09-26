@@ -1,27 +1,67 @@
 local AceGUI = LibStub("AceGUI-3.0")
 
--- Recycling functions
-local new, del
-do
-	local pool = setmetatable({},{__mode='k'})
-	function new()
-		local t = next(pool)
-		if t then
-			pool[t] = nil
-			return t
-		else
-			return {}
-		end
-	end
-	function del(t)
-		for k in pairs(t) do
-			t[k] = nil
-		end	
-		pool[t] = true
-	end
+-- TODO: this causes upgrading issues! Maybe use our own recycling?
+local new, del = AceGUI.new, AceGUI.del
+
+---------------------
+-- Common Elements --
+---------------------
+
+local FrameBackdrop = {
+	bgFile="Interface\\DialogFrame\\UI-DialogBox-Background",
+	edgeFile="Interface\\DialogFrame\\UI-DialogBox-Border", 
+	tile = true, tileSize = 32, edgeSize = 32, 
+	insets = { left = 8, right = 8, top = 8, bottom = 8 }
+}
+
+local PaneBackdrop  = {
+
+	bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+	edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+	tile = true, tileSize = 16, edgeSize = 16,
+	insets = { left = 3, right = 3, top = 5, bottom = 3 }
+}
+
+local ControlBackdrop  = {
+	bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+	edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+	tile = true, tileSize = 16, edgeSize = 16,
+	insets = { left = 3, right = 3, top = 3, bottom = 3 }
+}
+
+local function Control_OnEnter(this)
+	this.obj:Fire("OnEnter")
 end
 
-local WotLK = select(4, GetBuildInfo()) >= 30000
+local function Control_OnLeave(this)
+	this.obj:Fire("OnLeave")
+end
+
+-------------
+-- Widgets --
+-------------
+--[[
+	Widgets must provide the following functions
+		Aquire() - Called when the object is aquired, should set everything to a default hidden state
+		Release() - Called when the object is Released, should remove any anchors and hide the Widget
+		
+	And the following members
+		frame - the frame or derivitive object that will be treated as the widget for size and anchoring purposes
+		type - the type of the object, same as the name given to :RegisterWidget()
+		
+	Widgets contain a table called userdata, this is a safe place to store data associated with the wigdet
+	It will be cleared automatically when a widget is released
+	Placing values directly into a widget object should be avoided
+	
+	If the Widget can act as a container for other Widgets the following
+		content - frame or derivitive that children will be anchored to
+		
+	The Widget can supply the following Optional Members
+
+
+]]
+
+
 
 --------------
 -- TreeView --
@@ -29,32 +69,12 @@ local WotLK = select(4, GetBuildInfo()) >= 30000
 
 do
 	local Type = "TreeGroup"
-	local Version = 16
 	
-	local DEFAULT_TREE_WIDTH = 175
-	local DEFAULT_TREE_SIZABLE = true
+	local function Aquire(self)
 
-	local PaneBackdrop  = {
-		bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
-		edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-		tile = true, tileSize = 16, edgeSize = 16,
-		insets = { left = 3, right = 3, top = 5, bottom = 3 }
-	}
-
-    local DraggerBackdrop  = {
-		bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-		edgeFile = nil,
-		tile = true, tileSize = 16, edgeSize = 0,
-		insets = { left = 3, right = 3, top = 7, bottom = 7 }
-	}
-    
-	local function OnAcquire(self)
-		self:SetTreeWidth(DEFAULT_TREE_WIDTH,DEFAULT_TREE_SIZABLE)
-		self:EnableButtonTooltips(true)
 	end
 	
-	local function OnRelease(self)
-        
+	local function Release(self)
 		self.frame:ClearAllPoints()
 		self.frame:Hide()
 		self.status = nil
@@ -68,8 +88,6 @@ do
 			end
 		end
 		self.localstatus.scrollvalue = 0
-		self.localstatus.treewidth = DEFAULT_TREE_WIDTH
-		self.localstatus.treesizable = DEFAULT_TREE_SIZABLE
 	end
 	
 	local function GetButtonParents(line)
@@ -90,14 +108,12 @@ do
 	
 	local function ButtonOnClick(this)
 		local self = this.obj
-		self:Fire("OnClick",this.uniquevalue, this.selected)
 		if not this.selected then
 			self:SetSelected(this.uniquevalue)
 			this.selected = true
 			this:LockHighlight()
 			self:RefreshTree()
 		end
-		AceGUI:ClearFocus()
 	end
 	
 	local function ExpandOnClick(this)
@@ -115,60 +131,62 @@ do
 		status[button.uniquevalue] = not status[button.uniquevalue]
 		self:RefreshTree()
 	end
-    
-    local function EnableButtonTooltips(self, enable)
-    	self.enabletooltips = enable
-    end
-    
-    local function Button_OnEnter(this)
-    	local self = this.obj
-    	self:Fire("OnButtonEnter", this.uniquevalue, this)
-    	
-    	if self.enabletooltips then
-	        GameTooltip:SetOwner(this, "ANCHOR_NONE")
-	        GameTooltip:SetPoint("LEFT",this,"RIGHT")
-	        GameTooltip:SetText(this.text:GetText(), 1, .82, 0, 1)
-	    
-			GameTooltip:Show()
-		end
-	end
 	
-	local function Button_OnLeave(this)
-		local self = this.obj
-		self:Fire("OnButtonLeave", this.uniquevalue, this)
-		
-		if self.enabletooltips then
-			GameTooltip:Hide()
-		end
-	end
-    
-    
-	local buttoncount = 1
 	local function CreateButton(self)
-		local button = CreateFrame("Button",("AceGUI30TreeButton%d"):format(buttoncount),self.treeframe, WotLK and "OptionsListButtonTemplate" or "InterfaceOptionsButtonTemplate")
-		buttoncount = buttoncount + 1
+		local button = CreateFrame("Button",nil,self.treeframe)
 		button.obj = self
+		button:SetHeight(20)
 
 		button:SetScript("OnClick",ButtonOnClick)
 		button:SetScript("OnDoubleClick", ButtonOnDoubleClick)
-		button:SetScript("OnEnter",Button_OnEnter)
-		button:SetScript("OnLeave",Button_OnLeave)
+		local line = button:CreateTexture(nil,"BACKGROUND")
+		line:SetWidth(7)
+		line:SetHeight(20)
+		line:SetPoint("LEFT",button,"LEFT",13,0)
+		line:SetTexCoord(0,0.4375,0,0.625)
+		line:SetTexture("Interface\\AuctionFrame\\UI-AuctionFrame-FilterLines")
+		button.line = line
 
-		button.toggle.button = button
-		button.toggle:SetScript("OnClick",ExpandOnClick)
+		button:SetNormalTexture("Interface\\AuctionFrame\\UI-AuctionFrame-FilterBg")
+		button:GetNormalTexture():SetTexCoord(0,0.53125,0,0.625)
+
+		button:SetHighlightTexture("Interface\\PaperDollInfoFrame\\UI-Character-Tab-Highlight")
+		button:GetHighlightTexture():SetBlendMode("ADD")
+
+		local expand = CreateFrame("Button",nil,button)
+		expand.button = button
+		expand:SetNormalTexture("Interface\\Buttons\\UI-PlusButton-Up")
+		expand:SetPushedTexture("Interface\\Buttons\\UI-PlusButton-Down")
+		expand:SetDisabledTexture("Interface\\Buttons\\UI-PlusButton-Disabled")
+		expand:SetHighlightTexture("Interface\\Buttons\\UI-PlusButton-Hilight")
+		expand:SetScript("OnClick",ExpandOnClick)
+		expand:SetWidth(16)
+		expand:SetHeight(16)
+		button.expand = expand
+		
+		local text = button:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
+		button:SetFontString(text)
+		button.text = text
+		text:SetWidth(115)
+		text:SetHeight(8)
+		text:SetJustifyH("LEFT")
+		text:SetPoint("LEFT",button,"LEFT",4,0)
+
+		button:SetFont("GameFontNormalSmall",8)
 		
 		return button
 	end
 
-	local function UpdateButton(button, treeline, selected, canExpand, isExpanded)
+	local function UpdateButton(button, treeline, selected, last, canExpand, isExpanded)
 		local self = button.obj
-		local toggle = button.toggle
+		local expand = button.expand
 		local frame = self.frame
 		local text = treeline.text or ""
 		local level = treeline.level
 		local value = treeline.value
 		local uniquevalue = treeline.uniquevalue
 		local disabled = treeline.disabled
+		
 		
 		button.treeline = treeline
 		button.value = value
@@ -185,44 +203,65 @@ do
 		local line = button.line
 		button.level = level
 		if ( level == 1 ) then
-			if WotLK then
-				button:SetNormalFontObject("GameFontNormal")
+			button:SetText(text)
+			normalText:SetPoint("LEFT", button, "LEFT", 4, 0)
+			normalTexture:SetAlpha(1.0)
+			button:SetPoint("LEFT",frame,"LEFT",26,0)
+			expand:SetPoint("RIGHT",button,"LEFT",0,0)
+			line:Hide();
+		elseif ( level == 2 ) then
+			button:SetText(HIGHLIGHT_FONT_COLOR_CODE..text..FONT_COLOR_CODE_CLOSE)
+			button:SetPoint("LEFT",frame,"LEFT",34,0)
+			--normalText:SetPoint("LEFT", button, "LEFT", 12, 0)
+			normalTexture:SetAlpha(0.4)
+			expand:SetPoint("RIGHT",button,"LEFT",0,0)
+			line:Hide()
+		elseif ( level >= 3 ) then
+			button:SetText(HIGHLIGHT_FONT_COLOR_CODE..text..FONT_COLOR_CODE_CLOSE)
+			button:SetPoint("LEFT",frame,"LEFT",26,0)
+			normalText:SetPoint("LEFT", button, "LEFT", 20 + (level-3)*8, 0)
+			line:SetPoint("LEFT",button,"LEFT",13 + (level-3)*8,0)
+			normalTexture:SetAlpha(0.0)
+			expand:SetPoint("RIGHT",button,"LEFT",13 + (level-3)*8,0)
+			if ( last ) then
+				line:SetTexCoord(0.4375, 0.875, 0, 0.625)
 			else
-				button:SetTextFontObject("GameFontNormal")
+				line:SetTexCoord(0, 0.4375, 0, 0.625)
 			end
-			button:SetHighlightFontObject("GameFontHighlight")
-			button.text:SetPoint("LEFT", 8, 2)
-		else
-			if WotLK then
-				button:SetNormalFontObject("GameFontHighlightSmall")
-			else
-				button:SetTextFontObject("GameFontHighlightSmall")
-			end
-			button:SetHighlightFontObject("GameFontHighlightSmall")
-			button.text:SetPoint("LEFT", 8 * level, 2)
+			line:Show();
 		end
 		
 		if disabled then
 			button:EnableMouse(false)
-			button.text:SetText("|cff808080"..text..FONT_COLOR_CODE_CLOSE)
+			button:SetText("|cff808080"..text..FONT_COLOR_CODE_CLOSE)
 		else
-			button.text:SetText(text)
 			button:EnableMouse(true)
 		end
 		
 		if canExpand then
-			if not isExpanded then
-				toggle:SetNormalTexture("Interface\\Buttons\\UI-PlusButton-UP")
-				toggle:SetPushedTexture("Interface\\Buttons\\UI-PlusButton-DOWN")
+			if isExpanded then
+				expand:SetNormalTexture("Interface\\Buttons\\UI-MinusButton-Up")
+				expand:SetPushedTexture("Interface\\Buttons\\UI-MinusButton-Down")
+				expand:SetDisabledTexture("Interface\\Buttons\\UI-MinusButton-Disabled")
+				expand:Enable()
 			else
-				toggle:SetNormalTexture("Interface\\Buttons\\UI-MinusButton-UP")
-				toggle:SetPushedTexture("Interface\\Buttons\\UI-MinusButton-DOWN")
+				if disabled then
+					expand:Disable()
+				else
+					expand:Enable()
+				end
+				expand:SetNormalTexture("Interface\\Buttons\\UI-PlusButton-Up")
+				expand:SetPushedTexture("Interface\\Buttons\\UI-PlusButton-Down")
+				expand:SetDisabledTexture("Interface\\Buttons\\UI-PlusButton-Disabled")
 			end
-			toggle:Show()
 		else
-			toggle:Hide()
+			expand:SetNormalTexture(nil)
+			expand:SetPushedTexture(nil)
+			expand:SetDisabledTexture(nil)
+			expand:Disable()
 		end
 	end
+
 
 	
 	local function OnScrollValueChanged(this, value)
@@ -231,7 +270,6 @@ do
 		local status = self.status or self.localstatus
 		status.scrollvalue = value
 		self:RefreshTree()
-		AceGUI:ClearFocus()
 	end
 	
 	-- called to set an external table to store status in
@@ -244,13 +282,6 @@ do
 		if not status.scrollvalue then
 			status.scrollvalue = 0
 		end
-		if not status.treewidth then
-			status.treewidth = DEFAULT_TREE_WIDTH
-		end
-		if not status.treesizable then
-			status.treesizable = DEFAULT_TREE_SIZABLE
-		end
-		self:SetTreeWidth(status.treewidth,status.treesizable)
 		self:RefreshTree()
 	end
 
@@ -297,9 +328,7 @@ do
 		}
 	]]
 	local function SetTree(self, tree)
-		if tree then 
-			assert(type(tree) == "table") 
-		end
+		assert(type(tree) == "table")
 		self.tree = tree
 		self:RefreshTree()
 	end
@@ -347,33 +376,34 @@ do
 	end
 	
 	local function RefreshTree(self)
-		local buttons = self.buttons
+		if not self.tree then return end
+		--Build the list of visible entries from the tree and status tables
+		local status = self.status or self.localstatus
+		local groupstatus = status.groups
+		local tree = self.tree
 		local lines = self.lines
+		local buttons = self.buttons
+
+		local treeframe = self.treeframe
+
 		
-		for i, v in ipairs(buttons) do
-			v:Hide()
-		end
 		while lines[1] do
 			local t = tremove(lines)
 			for k in pairs(t) do
 				t[k] = nil
 			end
 			del(t)
-		end		
+		end
 		
-		if not self.tree then return end
-		--Build the list of visible entries from the tree and status tables
-		local status = self.status or self.localstatus
-		local groupstatus = status.groups
-		local tree = self.tree
-
-		local treeframe = self.treeframe
-
 		self:BuildLevel(tree, 1)
+		
+		for i, v in ipairs(buttons) do
+			v:Hide()
+		end
 		
 		local numlines = #lines
 		
-		local maxlines = (math.floor(((self.treeframe:GetHeight()or 0) - 20 ) / 18))
+		local maxlines = (math.floor(((self.treeframe:GetHeight()or 0) - 20 ) / 20))
 		
 		local first, last
 		
@@ -406,22 +436,19 @@ do
 				buttons[buttonnum] = button
 				button:SetParent(treeframe)
 				button:SetFrameLevel(treeframe:GetFrameLevel()+1)
-				button:ClearAllPoints()
 				if i == 1 then
 					if self.showscroll then
-						button:SetPoint("TOPRIGHT", self.treeframe,"TOPRIGHT",-22,-10)
-						button:SetPoint("TOPLEFT", self.treeframe, "TOPLEFT", 0, -10)
+						button:SetPoint("TOPRIGHT", self.treeframe,"TOPRIGHT",-26,-10)
 					else
-						button:SetPoint("TOPRIGHT", self.treeframe,"TOPRIGHT",0,-10)
-						button:SetPoint("TOPLEFT", self.treeframe, "TOPLEFT", 0, -10)
+						button:SetPoint("TOPRIGHT", self.treeframe,"TOPRIGHT",-10,-10)
 					end
 				else
+					button:SetParent(self.treeframe)
 					button:SetPoint("TOPRIGHT", buttons[buttonnum-1], "BOTTOMRIGHT",0,0)
-					button:SetPoint("TOPLEFT", buttons[buttonnum-1], "BOTTOMLEFT",0,0)
 				end
 			end
 
-			UpdateButton(button, line, status.selected == line.uniquevalue, line.hasChildren, groupstatus[line.uniquevalue] )
+			UpdateButton(button, line, status.selected == line.uniquevalue, (not lines[i+1]) or lines[i+1].level ~= line.level, line.hasChildren, groupstatus[line.uniquevalue] )
 			button:Show()
 			buttonnum = buttonnum + 1
 		end
@@ -436,7 +463,7 @@ do
 		end
 	end
 	
-	local function BuildUniqueValue(...)
+	function BuildUniqueValue(...)
 		local n = select('#', ...)
 		if n == 1 then
 			return ...
@@ -471,111 +498,16 @@ do
 		if show then
 			self.scrollbar:Show()
 			if self.buttons[1] then
-				self.buttons[1]:SetPoint("TOPRIGHT", self.treeframe,"TOPRIGHT",-22,-10)
+				self.buttons[1]:SetPoint("TOPRIGHT", self.treeframe,"TOPRIGHT",-26,-10)
 			end
 		else
 			self.scrollbar:Hide()
 			if self.buttons[1] then
-				self.buttons[1]:SetPoint("TOPRIGHT", self.treeframe,"TOPRIGHT",0,-10)
+				self.buttons[1]:SetPoint("TOPRIGHT", self.treeframe,"TOPRIGHT",-10,-10)
 			end
 		end
 	end
 	
-	local function OnWidthSet(self, width)
-		local content = self.content
-		local treeframe = self.treeframe
-		local status = self.status or self.localstatus
-		
-		local contentwidth = width - status.treewidth - 20
-		if contentwidth < 0 then
-			contentwidth = 0
-		end
-		content:SetWidth(contentwidth)
-		content.width = contentwidth
-		
-		local maxtreewidth = math.min(400, width - 50)
-		
-		if maxtreewidth > 100 and status.treewidth > maxtreewidth then
-			self:SetTreeWidth(maxtreewidth, status.treesizable)
-		end
-		treeframe:SetMaxResize(maxtreewidth,1600)
-	end
-	
-	
-	local function OnHeightSet(self, height)
-		local content = self.content
-		local contentheight = height - 20
-		if contentheight < 0 then
-			contentheight = 0
-		end
-		content:SetHeight(contentheight)
-		content.height = contentheight
-	end
-	
-
-	local function TreeOnMouseWheel(this, delta)
-		local self = this.obj
-		if self.showscroll then
-			local scrollbar = self.scrollbar
-			local min, max = scrollbar:GetMinMaxValues()
-			local value = scrollbar:GetValue()
-			local newvalue = math.min(max,math.max(min,value - delta))
-			if value ~= newvalue then
-				scrollbar:SetValue(newvalue)
-			end
-		end
-	end
-	
-	local function SetTreeWidth(self, treewidth, resizable)
-		if not resizable then
-			if type(treewidth) == 'number' then
-				resizable = false
-			elseif type(treewidth) == 'boolean' then
-				resizable = treewidth
-				treewidth = DEFAULT_TREE_WIDTH
-			else
-				resizable = false
-				treewidth = DEFAULT_TREE_WIDTH 
-			end
-		end
-		self.treeframe:SetWidth(treewidth)
-		self.dragger:EnableMouse(resizable)
-		
-		local status = self.status or self.localstatus
-		status.treewidth = treewidth
-		status.treesizable = resizable
-	end
-	
-	local function draggerLeave(this)
-		this:SetBackdropColor(1, 1, 1, 0)
-	end
-	
-	local function draggerEnter(this)
-		this:SetBackdropColor(1, 1, 1, 0.8)
-	end
-	
-	local function draggerDown(this)
-		local treeframe = this:GetParent()
-		treeframe:StartSizing("RIGHT")
-	end
-	
-	local function draggerUp(this)
-		local treeframe = this:GetParent()
-		local self = treeframe.obj
-		local frame = treeframe:GetParent()
-		treeframe:StopMovingOrSizing()
-		--treeframe:SetScript("OnUpdate", nil)
-		treeframe:SetUserPlaced(false)
-		--Without this :GetHeight will get stuck on the current height, causing the tree contents to not resize
-		treeframe:SetHeight(0)
-		treeframe:SetPoint("TOPLEFT",frame,"TOPLEFT",0,0)
-		treeframe:SetPoint("BOTTOMLEFT",frame,"BOTTOMLEFT",0,0)
-		treeframe.obj:Fire("OnTreeResize",treeframe:GetWidth())
-		
-		local status = self.status or self.localstatus
-		status.treewidth = treeframe:GetWidth()
-	end
-
 	local createdcount = 0
 	local function Constructor()
 		local frame = CreateFrame("Frame",nil,UIParent)
@@ -592,37 +524,19 @@ do
 		treeframe.obj = self
 		treeframe:SetPoint("TOPLEFT",frame,"TOPLEFT",0,0)
 		treeframe:SetPoint("BOTTOMLEFT",frame,"BOTTOMLEFT",0,0)
-		treeframe:SetWidth(DEFAULT_TREE_WIDTH)
+		treeframe:SetWidth(183)
 		treeframe:SetScript("OnUpdate",FirstFrameUpdate)
 		treeframe:SetScript("OnSizeChanged",ResizeUpdate)
 		
-		treeframe:EnableMouseWheel(true)
-		treeframe:SetScript("OnMouseWheel", TreeOnMouseWheel)
 		treeframe:SetBackdrop(PaneBackdrop)
 		treeframe:SetBackdropColor(0.1,0.1,0.1,0.5)
 		treeframe:SetBackdropBorderColor(0.4,0.4,0.4)
 		
-		treeframe:SetResizable(true)
-		treeframe:SetMinResize(100, 1)
-		treeframe:SetMaxResize(400,1600)
-		local dragger = CreateFrame("Frame", nil, treeframe)
-		dragger:SetWidth(8)
-		dragger:SetPoint("TOP", treeframe, "TOPRIGHT")
-		dragger:SetPoint("BOTTOM", treeframe, "BOTTOMRIGHT")
-		dragger:SetBackdrop(DraggerBackdrop)
-		dragger:SetBackdropColor(1, 1, 1, 0)
-		dragger:SetScript("OnMouseDown", draggerDown)
-		dragger:SetScript("OnMouseUp", draggerUp)
-		dragger:SetScript("OnEnter", draggerEnter)
-		dragger:SetScript("OnLeave", draggerLeave)
-		
-		self.dragger = dragger
 		self.treeframe = treeframe
-		self.OnRelease = OnRelease
-		self.OnAcquire = OnAcquire
+		self.Release = Release
+		self.Aquire = Aquire
 		
 		self.SetTree = SetTree
-		self.SetTreeWidth = SetTreeWidth
 		self.RefreshTree = RefreshTree
 		self.SetStatusTable = SetStatusTable
 		self.BuildLevel = BuildLevel
@@ -633,19 +547,15 @@ do
 		self.Select = Select
 		self.SelectByValue = SelectByValue
 		self.SelectByPath = SelectByPath
-		self.OnWidthSet = OnWidthSet
-		self.OnHeightSet = OnHeightSet		
-		self.EnableButtonTooltips = EnableButtonTooltips
 		
 		self.frame = frame
 		frame.obj = self
-
 		createdcount = createdcount + 1
 		local scrollbar = CreateFrame("Slider",("AceConfigDialogTreeGroup%dScrollBar"):format(createdcount),treeframe,"UIPanelScrollBarTemplate")
 		self.scrollbar = scrollbar
 		local scrollbg = scrollbar:CreateTexture(nil,"BACKGROUND")
 		scrollbg:SetAllPoints(scrollbar)
-		scrollbg:SetTexture(0,0,0,0.4)
+		scrollbg:SetTexture(0,0,0,1)
 		scrollbar.obj = self
 		self.noupdate = true
 		scrollbar:SetPoint("TOPRIGHT",treeframe,"TOPRIGHT",-10,-26)
@@ -660,7 +570,7 @@ do
 
 		local border = CreateFrame("Frame",nil,frame)
 		self.border = border
-		border:SetPoint("TOPLEFT",treeframe,"TOPRIGHT", 0,0)
+		border:SetPoint("TOPLEFT",frame,"TOPLEFT",179,0)
 		border:SetPoint("BOTTOMRIGHT",frame,"BOTTOMRIGHT",0,0)
 		
 		border:SetBackdrop(PaneBackdrop)
@@ -679,5 +589,5 @@ do
 		return self
 	end
 	
-	AceGUI:RegisterWidgetType(Type,Constructor,Version)
+	AceGUI:RegisterWidgetType(Type,Constructor)
 end

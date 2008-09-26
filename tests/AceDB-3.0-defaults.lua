@@ -64,8 +64,9 @@ do
 	
 	assert(db.profile.singleEntry == nil)
 	assert(db.profile.tableEntry == nil)
-	assert(db.profile.starTest == nil)
-	assert(db.profile.doubleStarTest.randomkey	== nil)
+	assert(db.profile.starTest.randomkey.starDefault == nil)
+	assert(db.profile.starTest.sibling == nil)
+	assert(db.profile.doubleStarTest.randomkey.doubleStarDefault == nil)
 	assert(db.profile.doubleStarTest.siblingDeriv.doubleStarDefault == "doubleStarDefault")
 	assert(db.profile.starTest2.randomkey == "notfun")
 	assert(db.profile.starTest2.randomkey2 == nil)
@@ -84,9 +85,6 @@ do
 				["pet"] = {
 					test = 3
 				},
-				["bug"] = {
-					test = 3,
-				},
 			} 
 		} 
 	} 
@@ -104,7 +102,6 @@ do
 					}, 
 					["focus"] = { 
 					}, 
-					bug = "bug",
 				}, 
 			}, 
 		}, 
@@ -115,8 +112,6 @@ do
 	assert(data.profile.units["player"].test == 2)
 	assert(data.profile.units["pet"].test == 3)
 	assert(data.profile.units["focus"].test == 2)
-	assert(type(data.profile.units.bug) == "string")
-	WoWAPI_FireEvent("PLAYER_LOGOUT")
 end
 
 do
@@ -154,71 +149,3 @@ do
 	assert(data.profile.units["pet"].test == 2)
 	assert(data.profile.units["focus"].test == 2)
 end
-
-do
-	local defaultTest = {
-		profile = {
-			foo = {
-				["*"] = {
-					plyf = true,
-			},
-			}     
-		}
-	}
-
-
-	local bugdb = {
-		["profileKeys"] = {
-			["player - Realm Name"] = "player - Realm Name",
-		},
-		["profiles"] = {
-			["player - Realm Name"] = {
-				["foo"] = {
-					hopla = 42,
-				},
-			},
-		},
-	}
-
-	local data = LibStub("AceDB-3.0"):New(bugdb, defaultTest)
-
-	assert(data.profile.foo.hopla == 42)
-end 
-
-do
-	local defaultTest = {
-		profile = {
-			['**'] = {
-				['*'] = {
-					stuff = 5,
-					stuff2 = {
-						['**'] = {
-							a = 4,
-						},
-					},
-				},
-			},
-			stuff2 = {
-				blu = {
-					stuff = 6,
-					stuff2 = {
-						b = {
-							a = 5
-						},
-					},
-				},
-			},
-		},
-	}
-	
-	local bugdb = {}
-	local data = LibStub("AceDB-3.0"):New(bugdb, defaultTest)
-	data.profile.stuff2.blu.stuff = 5
-	data.profile.stuff2.blu.stuff2.b.a = 4
-	data:RegisterDefaults()
-	
-	local data2 = LibStub("AceDB-3.0"):New(bugdb, defaultTest)
-	
-	assert(data2.profile.stuff2.blu.stuff == 5)
-	assert(data2.profile.stuff2.blu.stuff2.b.a == 4)
-end 

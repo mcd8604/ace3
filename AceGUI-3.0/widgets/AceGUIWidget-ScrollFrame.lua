@@ -1,11 +1,45 @@
 local AceGUI = LibStub("AceGUI-3.0")
 
+---------------------
+-- Common Elements --
+---------------------
+
+local FrameBackdrop = {
+	bgFile="Interface\\DialogFrame\\UI-DialogBox-Background",
+	edgeFile="Interface\\DialogFrame\\UI-DialogBox-Border", 
+	tile = true, tileSize = 32, edgeSize = 32, 
+	insets = { left = 8, right = 8, top = 8, bottom = 8 }
+}
+
+local PaneBackdrop  = {
+
+	bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+	edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+	tile = true, tileSize = 16, edgeSize = 16,
+	insets = { left = 3, right = 3, top = 5, bottom = 3 }
+}
+
+local ControlBackdrop  = {
+	bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+	edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+	tile = true, tileSize = 16, edgeSize = 16,
+	insets = { left = 3, right = 3, top = 3, bottom = 3 }
+}
+
+local function Control_OnEnter(this)
+	this.obj:Fire("OnEnter")
+end
+
+local function Control_OnLeave(this)
+	this.obj:Fire("OnLeave")
+end
+
 -------------
 -- Widgets --
 -------------
 --[[
 	Widgets must provide the following functions
-		Acquire() - Called when the object is aquired, should set everything to a default hidden state
+		Aquire() - Called when the object is aquired, should set everything to a default hidden state
 		Release() - Called when the object is Released, should remove any anchors and hide the Widget
 		
 	And the following members
@@ -29,13 +63,12 @@ local AceGUI = LibStub("AceGUI-3.0")
 --------------------------
 do
 	local Type = "ScrollFrame"
-	local Version = 3
 	
-	local function OnAcquire(self)
+	local function Aquire(self)
 
 	end
 	
-	local function OnRelease(self)
+	local function Release(self)
 		self.frame:ClearAllPoints()
 		self.frame:Hide()
 		self.status = nil
@@ -94,10 +127,10 @@ do
 		if viewheight < height then
 			self.scrollbar:Hide()
 			self.scrollbar:SetValue(0)
-			--self.scrollframe:SetPoint("BOTTOMRIGHT",self.frame,"BOTTOMRIGHT",0,0)
+			self.scrollframe:SetPoint("BOTTOMRIGHT",self.frame,"BOTTOMRIGHT",0,0)
 		else
 			self.scrollbar:Show()
-			--self.scrollframe:SetPoint("BOTTOMRIGHT",self.frame,"BOTTOMRIGHT",-16,0)
+			self.scrollframe:SetPoint("BOTTOMRIGHT",self.frame,"BOTTOMRIGHT",-16,0)
 			local value = (offset / (viewheight - height) * 1000)
 			if value > 1000 then value = 1000 end
 			self.scrollbar:SetValue(value)
@@ -145,37 +178,27 @@ do
 	
 	local createdcount = 0
 	
-	local function OnWidthSet(self, width)
-		local content = self.content
-		content.width = width
-	end
-	
-	
-	local function OnHeightSet(self, height)
-		local content = self.content
-		content.height = height
-	end
-	
 	local function Constructor()
 		local frame = CreateFrame("Frame",nil,UIParent)
 		local self = {}
 		self.type = Type
 	
-		self.OnRelease = OnRelease
-		self.OnAcquire = OnAcquire
+		self.Release = Release
+		self.Aquire = Aquire
 		
 		self.MoveScroll = MoveScroll
 		self.FixScroll = FixScroll
 		self.SetScroll = SetScroll
 		self.LayoutFinished = LayoutFinished
 		self.SetStatusTable = SetStatusTable
-		self.OnWidthSet = OnWidthSet
-		self.OnHeightSet = OnHeightSet
-		
+	
 		self.localstatus = {} 	
 		self.frame = frame
 		frame.obj = self
 
+		
+		
+		
 		--Container Support
 		local scrollframe = CreateFrame("ScrollFrame",nil,frame)
 		local content = CreateFrame("Frame",nil,scrollframe)
@@ -183,7 +206,7 @@ do
 		local scrollbar = CreateFrame("Slider",("AceConfigDialogScrollFrame%dScrollBar"):format(createdcount),scrollframe,"UIPanelScrollBarTemplate")
 		local scrollbg = scrollbar:CreateTexture(nil,"BACKGROUND")
 		scrollbg:SetAllPoints(scrollbar)
-		scrollbg:SetTexture(0,0,0,0.4)
+		scrollbg:SetTexture(0,0,0,1)
 		self.scrollframe = scrollframe
 		self.content = content
 		self.scrollbar = scrollbar
@@ -194,7 +217,7 @@ do
 		
 		scrollframe:SetScrollChild(content)
 		scrollframe:SetPoint("TOPLEFT",frame,"TOPLEFT",0,0)
-		scrollframe:SetPoint("BOTTOMRIGHT",self.frame,"BOTTOMRIGHT",-16,0)
+		scrollframe:SetPoint("BOTTOMRIGHT",frame,"BOTTOMRIGHT",0,0)
 		scrollframe:EnableMouseWheel(true)
 		scrollframe:SetScript("OnMouseWheel", OnMouseWheel)
 		scrollframe:SetScript("OnSizeChanged", OnSizeChanged)
@@ -221,5 +244,5 @@ do
 		return self
 	end
 	
-	AceGUI:RegisterWidgetType(Type,Constructor,Version)
+	AceGUI:RegisterWidgetType(Type,Constructor)
 end

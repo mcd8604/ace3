@@ -1,26 +1,67 @@
 local AceGUI = LibStub("AceGUI-3.0")
 
+---------------------
+-- Common Elements --
+---------------------
+
+local FrameBackdrop = {
+	bgFile="Interface\\DialogFrame\\UI-DialogBox-Background",
+	edgeFile="Interface\\DialogFrame\\UI-DialogBox-Border", 
+	tile = true, tileSize = 32, edgeSize = 32, 
+	insets = { left = 8, right = 8, top = 8, bottom = 8 }
+}
+
+local PaneBackdrop  = {
+
+	bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+	edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+	tile = true, tileSize = 16, edgeSize = 16,
+	insets = { left = 3, right = 3, top = 5, bottom = 3 }
+}
+
+local ControlBackdrop  = {
+	bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+	edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+	tile = true, tileSize = 16, edgeSize = 16,
+	insets = { left = 3, right = 3, top = 3, bottom = 3 }
+}
+
+local function Control_OnEnter(this)
+	this.obj:Fire("OnEnter")
+end
+
+local function Control_OnLeave(this)
+	this.obj:Fire("OnLeave")
+end
+
+-------------
+-- Widgets --
+-------------
+--[[
+	Widgets must provide the following functions
+		Aquire() - Called when the object is aquired, should set everything to a default hidden state
+		Release() - Called when the object is Released, should remove any anchors and hide the Widget
+		
+	And the following members
+		frame - the frame or derivitive object that will be treated as the widget for size and anchoring purposes
+		type - the type of the object, same as the name given to :RegisterWidget()
+		
+	Widgets contain a table called userdata, this is a safe place to store data associated with the wigdet
+	It will be cleared automatically when a widget is released
+	Placing values directly into a widget object should be avoided
+	
+	If the Widget can act as a container for other Widgets the following
+		content - frame or derivitive that children will be anchored to
+		
+	The Widget can supply the following Optional Members
+
+
+]]
 --------------------------
 -- Keybinding  		    --
 --------------------------
 do
 	local Type = "Keybinding"
-	local Version = 8
-
-	local ControlBackdrop  = {
-		bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-		edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-		tile = true, tileSize = 16, edgeSize = 16,
-		insets = { left = 3, right = 3, top = 3, bottom = 3 }
-	}
-
-	local function Control_OnEnter(this)
-		this.obj:Fire("OnEnter")
-	end
-
-	local function Control_OnLeave(this)
-		this.obj:Fire("OnLeave")
-	end
 	
 	local function keybindingMsgFixWidth(this)
 		this:SetWidth(this.msg:GetWidth()+10)
@@ -28,8 +69,9 @@ do
 	end
 
 	local function Keybinding_OnClick(this, button)
+		local self = this.obj
+	
 		if button == "LeftButton" or button == "RightButton" then
-			local self = this.obj
 			if self.waitingForKey then
 				this:EnableKeyboard(false)
 				self.msgframe:Hide()
@@ -42,36 +84,38 @@ do
 				self.waitingForKey = true
 			end
 		end
-		AceGUI:ClearFocus()
 	end
-
-	local ignoreKeys = nil
+	
+	
 	local function Keybinding_OnKeyDown(this, key)
 		local self = this.obj
 		if self.waitingForKey then
-			local keyPressed = key
-			if keyPressed == "ESCAPE" then
-				keyPressed = ""
-			else
-				if not ignoreKeys then
-					ignoreKeys = {
-						["BUTTON1"] = true, ["BUTTON2"] = true,
-						["UNKNOWN"] = true,
-						["LSHIFT"] = true, ["LCTRL"] = true, ["LALT"] = true,
-						["RSHIFT"] = true, ["RCTRL"] = true, ["RALT"] = true,
-					}
+			local keyPressed = key;
+				if keyPressed == "ESCAPE" then
+					keyPressed = ""
+				else
+					if ( keyPressed == "BUTTON1" or keyPressed == "BUTTON2" ) then
+						return;
+					end
+					if ( keyPressed == "UNKNOWN" ) then
+						return;
+					end
+					if ( keyPressed == "LSHIFT" or keyPressed == "LCTRL" or keyPressed == "LALT") then
+						return;
+					end
+					if ( keyPressed == "RSHIFT" or keyPressed == "RCTRL" or keyPressed == "RALT") then
+						return;
+					end
+					if ( IsShiftKeyDown() ) then
+						keyPressed = "SHIFT-"..keyPressed;
+					end
+					if ( IsControlKeyDown() ) then
+						keyPressed = "CTRL-"..keyPressed;
+					end
+					if ( IsAltKeyDown() ) then
+						keyPressed = "ALT-"..keyPressed;
+					end
 				end
-				if ignoreKeys[keyPressed] then return end
-				if IsShiftKeyDown() then
-					keyPressed = "SHIFT-"..keyPressed
-				end
-				if IsControlKeyDown() then
-					keyPressed = "CTRL-"..keyPressed
-				end
-				if IsAltKeyDown() then
-					keyPressed = "ALT-"..keyPressed
-				end
-			end
 	
 			if not self.disabled then
 				self:Fire("OnKeyChanged",keyPressed)
@@ -85,22 +129,22 @@ do
 	end
 	
 	local function Keybinding_OnMouseDown(this, button)
-		if button == "LeftButton" or button == "RightButton" then
+		if ( button == "LeftButton" or button == "RightButton" ) then
 			return
-		elseif button == "MiddleButton" then
-			button = "BUTTON3"
-		elseif button == "Button4" then
+		elseif ( button == "MiddleButton" ) then
+			button = "BUTTON3";
+		elseif ( button == "Button4" ) then
 			button = "BUTTON4"
-		elseif button == "Button5" then
+		elseif ( button == "Button5" ) then
 			button = "BUTTON5"
 		end
 		Keybinding_OnKeyDown(this, button)
 	end
-	
-	local function OnAcquire(self)
+	local function Aquire(self)
+
 	end
 	
-	local function OnRelease(self)
+	local function Release(self)
 		self.frame:ClearAllPoints()
 		self.frame:Hide()
 		self.waitingForKey = nil
@@ -111,10 +155,8 @@ do
 		self.disabled = disabled
 		if disabled then
 			self.button:Disable()
-			self.label:SetTextColor(0.5,0.5,0.5)
 		else
 			self.button:Enable()
-			self.label:SetTextColor(1,1,1)
 		end
 	end
 	
@@ -126,17 +168,16 @@ do
 		self.label:SetText(label or "")
 	end
 
-
 	local function Constructor()
-		local num  = AceGUI:GetNextWidgetNum(Type)
+	
 		local frame = CreateFrame("Frame",nil,UIParent)
 		
-		local button = CreateFrame("Button","AceGUI-3.0 KeybindingButton"..num,frame,"UIPanelButtonTemplate2")
+		local button = CreateFrame("Button",nil,frame,"UIPanelButtonTemplate")
 		
 		local self = {}
 		self.type = Type
-		self.num = num
 
+		--local text = frame:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
 		local text = button:GetFontString()
 		text:SetPoint("LEFT",button,"LEFT",7,0)
 		text:SetPoint("RIGHT",button,"RIGHT",-7,0)
@@ -157,11 +198,9 @@ do
 		frame:SetWidth(200)
 		frame:SetHeight(44)
 		
-		self.alignoffset = 30
-		
 		self.button = button
 		
-		local label = frame:CreateFontString(nil,"OVERLAY","GameFontHighlight")
+		local label = frame:CreateFontString(nil,"OVERLAY","GameFontNormal")
 		label:SetPoint("TOPLEFT",frame,"TOPLEFT",0,0)
 		label:SetPoint("TOPRIGHT",frame,"TOPRIGHT",0,0)
 		label:SetJustifyH("CENTER")
@@ -172,7 +211,7 @@ do
 		msgframe:SetHeight(30)
 		msgframe:SetBackdrop(ControlBackdrop)
 		msgframe:SetBackdropColor(0,0,0)
-		msgframe:SetFrameStrata("FULLSCREEN_DIALOG")
+		msgframe:SetFrameStrata("DIALOG")
 		msgframe:SetFrameLevel(1000)
 		self.msgframe = msgframe
 		local msg = msgframe:CreateFontString(nil,"OVERLAY","GameFontNormal")
@@ -183,8 +222,8 @@ do
 		msgframe:SetPoint("BOTTOM",button,"TOP",0,0)
 		msgframe:Hide()
 	
-		self.OnRelease = OnRelease
-		self.OnAcquire = OnAcquire
+		self.Release = Release
+		self.Aquire = Aquire
 		self.SetLabel = SetLabel
 		self.SetDisabled = SetDisabled
 		self.SetKey = SetKey
@@ -193,9 +232,14 @@ do
 		frame.obj = self
 		button.obj = self
 
+		--Container Support
+		--local content = CreateFrame("Frame",nil,frame)
+		--self.content = content
+		
+		--AceGUI:RegisterAsContainer(self)
 		AceGUI:RegisterAsWidget(self)
 		return self
 	end
 	
-	AceGUI:RegisterWidgetType(Type,Constructor,Version)
+	AceGUI:RegisterWidgetType(Type,Constructor)
 end

@@ -1,5 +1,5 @@
 --[[ $Id$ ]]
-local MAJOR,MINOR = "AceConsole-3.0", 6
+local MAJOR,MINOR = "AceConsole-3.0", 0
 
 local AceConsole, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
 
@@ -9,23 +9,13 @@ AceConsole.embeds = AceConsole.embeds or {} -- table containing objects AceConso
 AceConsole.commands = AceConsole.commands or {} -- table containing commands registered
 AceConsole.weakcommands = AceConsole.weakcommands or {} -- table containing self, command => func references for weak commands that don't persist through enable/disable
 
--- local upvalues
-local _G = _G
-local pairs = pairs
-local select = select
-local type = type
-local tostring = tostring
-local strfind = string.find
-local strsub = string.sub
-local max = math.max
-
 -- AceConsole:Print( [chatframe,] ... )
 --
 -- Print to DEFAULT_CHAT_FRAME or given chatframe (anything with an .AddMessage member)
 function AceConsole:Print(...)
 	local text = ""
 	if self ~= AceConsole then
-		text = "|cff33ff99"..tostring( self ).."|r: "
+		text = tostring( self )..": "
 	end
 
 	local frame = select(1, ...)
@@ -45,15 +35,21 @@ end
 -- command (string) - chat command to be registered WITHOUT leading "/"
 -- func (function|membername) - function to call, or self[membername](self, ...) call
 -- persist (boolean) - false: the command will be soft disabled/enabled when aceconsole is used as a mixin (default: true)
+-- silent (boolean) - don't whine if command already exists, silently fail
 --
 -- Register a simple chat command
-function AceConsole:RegisterChatCommand( command, func, persist )
-	if type(command)~="string" then error([[Usage: AceConsole:RegisterChatCommand( "command", func[, persist ]): 'command' - expected a string]], 2) end
+function AceConsole:RegisterChatCommand( command, func, persist, silent )
+	if type(command)~="string" then error([[Usage: AceConsole:RegisterChatCommand( "command", func[, persist[, silent] ]): 'command' - expected a string]], 2) end
 	
 	if persist==nil then persist=true end	-- I'd rather have my addon's "/addon enable" around if the author screws up. Having some extra slash regged when it shouldnt be isn't as destructive. True is a better default. /Mikk
 	
 	local name = "ACECONSOLE_"..command:upper()
-	
+	if SlashCmdList[name] then
+		if not silent then
+			geterrorhandler()(tostring(self)..": Chat Command '"..command.."' already exists, will not overwrite.")
+		end
+		return
+	end
 	if type( func ) == "string" then
 		SlashCmdList[name] = function(input)
 			self[func](self, input)
@@ -65,10 +61,8 @@ function AceConsole:RegisterChatCommand( command, func, persist )
 	AceConsole.commands[command] = name
 	-- non-persisting commands are registered for enabling disabling
 	if not persist then
-		if not AceConsole.weakcommands[self] then AceConsole.weakcommands[self] = {} end
 		AceConsole.weakcommands[self][command] = func
 	end
-	return true
 end
 
 
@@ -79,13 +73,11 @@ function AceConsole:UnregisterChatCommand( command )
 	local name = AceConsole.commands[command]
 	if name then
 		SlashCmdList[name] = nil
-		_G["SLASH_" .. name .. "1"] = nil
+		setglobal("SLASH_"..name.."1", nil)
 		hash_SlashCmdList["/" .. command:upper()] = nil
 		AceConsole.commands[command] = nil
 	end
 end
-
-function AceConsole:IterateChatCommands() return pairs(AceConsole.commands) end
 
 
 local function nils(n, ...)
@@ -159,10 +151,6 @@ function AceConsole:GetArgs(str, numargs, startpos)
 				
 				pos=strfind(str, "|h", pos+2)	-- second |h
 				if not pos then break end
-			elseif strsub(str,pos, pos+1) == "|T" then
-				-- It's a |T....|t  texture
-				pos=strfind(str, "|t", pos+2)
-				if not pos then break end
 			end
 			
 			pos=pos+2 -- skip past this escape (last |h if it was a hyperlink)
@@ -197,7 +185,6 @@ function AceConsole:Embed( target )
 		target[v] = self[v]
 	end
 	self.embeds[target] = true
-	return target
 end
 
 function AceConsole:OnEmbedEnable( target )

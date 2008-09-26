@@ -1,6 +1,5 @@
 dofile("wow_api.lua")
 dofile("LibStub.lua")
-dofile("../CallbackHandler-1.0/CallbackHandler-1.0.lua")
 dofile("../AceConsole-3.0/AceConsole-3.0.lua")
 dofile("../AceConfig-3.0/AceConfigRegistry-3.0/AceConfigRegistry-3.0.lua")
 dofile("../AceConfig-3.0/AceConfigCmd-3.0/AceConfigCmd-3.0.lua")
@@ -41,7 +40,7 @@ function app:set_toggle(info, ...)
 end
 
 
---- set / get / validate as function refs
+--- set / get / validate / confirm as function refs
 
 function makefunc(name)
 	_G[name] = function(info,...)
@@ -56,6 +55,9 @@ makefunc("set_base")
 makefunc("get_base")
 makefunc("validate_base")
 
+function confirm_base(info, ...)
+	assert(false)	-- not implemented yet, see ACE-60
+end
 
 
 
@@ -66,13 +68,15 @@ local opts = {
 	get = get_base,	 -- tests inheritance by declaring it at the bottom
 	set = set_base,
 	validate = validate_base,
+	confirm = confirm_base,
 	
 	args = {
 		input = {
 			type="input",
 			name="Input",
 			desc="Input Desc",
-			validate = false,		-- tests removing inherited validate
+			validate = false,		-- tests removing inherited validate/confirm
+			confirm = false
 		},
 		toggle = {
 			type="toggle",
@@ -81,55 +85,25 @@ local opts = {
 			handler=app,			-- tests "handler" arg
 			get = "get_toggle",	-- tests overriding, and membernames
 			set = "set_toggle",
-		},
-		plugcmd = {	-- this should never be used, we should use the plugin!
-			name="PlugCmdOrig",
-			desc="YOU SHOULD NOT SEE THIS",
-			type="toggle",
-			set = function() assert(false) end,
-			get = function() assert(false) end,
 		}
-	},
-	
-	plugins = {	-- test plugins
-		plugin1 = {
-			plugcmd = {
-				name="PluggedCmd",
-				desc="Woohoo",
-				type="toggle",
-			},
-			plugcmd2 = {
-				name="PluggedCmd2",
-				desc="WooTwo",
-				type="toggle",
-			}
-		},
-		plugin2 = {
-			-- empty, shouldnt cause errors
-		},
-		plugin3 = {
-			p3cmd = {
-				name="Plugin3Cmd",
-				desc="WooThree",
-				type="toggle",
-			},
-		}
-		
 	}
 }
 
 creg:RegisterOptionsTable("testapp", opts)
 
-assert(creg:GetOptionsTable("testapp")("cmd","foo-1") == opts)
-assert(creg:GetOptionsTable("testapp","cmd","foo-1") == opts)
+assert(creg:GetOptionsTable("testapp")("slash","foo-1") == opts)
 
 
 -- User error handler
 local expect = {}	-- list of strings to expect
 function ChatFrame1.AddMessage(self, txt)
-	local expstr = tremove(expect)
-	assert(expstr, "Unexpected output: <"..txt..">")
-	assert(string.match(txt,expstr), "Got output <"..txt..">, expected <"..expstr..">")
+	if strmatch(txt, "AceConfigCmd%-3.0: TODO: .* ACE%-60") then
+		-- skip
+	else
+		local expstr = tremove(expect)
+		assert(expstr, "Unexpected output: <"..txt..">")
+		assert(string.match(txt,expstr), "Got output <"..txt..">, expected <"..expstr..">")
+	end
 end
 
 
@@ -193,35 +167,6 @@ end
 ccmd:HandleCommand("test","testapp","input   hi2u  woo  ")
 
 
-
-
------------------------------------------------------------------------
-
-local seen = {
-  [".*Arguments to.*"]=0,
-  ["input.*Input Desc"]=0,
-  ["toggle.*Toggle Desc"]=0,
-  ["plugcmd.*Woohoo"]=0,
-  ["plugcmd2.*WooTwo"]=0,
-  ["p3cmd.*WooThree"]=0,
-}
-function ChatFrame1.AddMessage(self, txt)
-	local ok
-	for k,v in pairs(seen) do
-		if strmatch(txt, k) then
-			seen[k]=seen[k]+1
-			ok=true
-			break
-		end
-	end
-	assert(ok, "Did not expect to see "..format("%q",txt))
-end
-
-ccmd:HandleCommand("test","testapp","")
-
-for k,v in pairs(seen) do
-  assert(v==1, "Expected to see <"..k.."> once. Saw it "..v.." times.")
-end
 
 -----------------------------------------------------------------------
 print "OK"

@@ -5,7 +5,7 @@ local donothing = function() end
 local frames = {} -- Stores globally created frames, and their internal properties.
 
 local FrameClass = {} -- A class for creating frames.
-FrameClass.methods = { "SetScript", "RegisterEvent", "UnregisterEvent", "UnregisterAllEvents", "Show", "Hide", "IsShown", "ClearAllPoints", "SetParent" }
+FrameClass.methods = { "SetScript", "RegisterEvent", "UnregisterEvent", "UnregisterAllEvents", "Show", "Hide", "IsShown" }
 function FrameClass:New()
 	local frame = {}
 	for i,method in ipairs(self.methods) do
@@ -15,8 +15,7 @@ function FrameClass:New()
 		events = {},
 		scripts = {},
 		timer = GetTime(),
-		isShow = true,
-		parent = nil,
+		isShow = true
 	}
 	return frame, frameProps
 end
@@ -43,16 +42,11 @@ end
 function FrameClass:IsShown()
 	return frames[self].isShow
 end
-function FrameClass:ClearAllPoints()
-end
-function FrameClass:SetParent(parent)
-	frames[self].parent = parent
-end
+
 
 
 function CreateFrame(kind, name, parent)
 	local frame,internal = FrameClass:New()
-	internal.parent = parent
 	frames[frame] = internal
 	if name then
 		_G[name] = frame
@@ -181,10 +175,6 @@ function IsLoggedIn()
 	return false
 end
 
-function GetFramerate()
-	return 60
-end
-
 time = os.clock
 
 strmatch = string.match
@@ -201,9 +191,8 @@ function hooksecurefunc(func_name, post_hook_func)
 	local orig_func = _G[func_name]
 
 	_G[func_name] = function (...)
-				local ret = { orig_func(...) }		-- yeahyeah wasteful, see if i care, it's a test framework
-				post_hook_func(...)
-				return unpack(ret)
+				orig_func(...)
+				return post_hook_func(...)
 			end
 end
 
@@ -216,10 +205,6 @@ function WoWAPI_FireEvent(event,...)
 	for frame, props in pairs(frames) do
 		if props.events[event] then
 			if props.scripts["OnEvent"] then
-				for i=1,select('#',...) do
-					_G["arg"..i] = select(i,...)
-				end
-				_G.event=event
 				props.scripts["OnEvent"](frame,event,...)
 			end
 		end
@@ -233,7 +218,6 @@ function WoWAPI_FireUpdate(forceNow)
 	local now = GetTime()
 	for frame,props in pairs(frames) do
 		if props.isShow and props.scripts.OnUpdate then
-			_G.arg1=now-props.timer
 			props.scripts.OnUpdate(frame,now-props.timer)
 			props.timer = now
 		end

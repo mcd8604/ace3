@@ -1,40 +1,79 @@
 local AceGUI = LibStub("AceGUI-3.0")
 
+---------------------
+-- Common Elements --
+---------------------
+
+local FrameBackdrop = {
+	bgFile="Interface\\DialogFrame\\UI-DialogBox-Background",
+	edgeFile="Interface\\DialogFrame\\UI-DialogBox-Border", 
+	tile = true, tileSize = 32, edgeSize = 32, 
+	insets = { left = 8, right = 8, top = 8, bottom = 8 }
+}
+
+local PaneBackdrop  = {
+
+	bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+	edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+	tile = true, tileSize = 16, edgeSize = 16,
+	insets = { left = 3, right = 3, top = 5, bottom = 3 }
+}
+
+local ControlBackdrop  = {
+	bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+	edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+	tile = true, tileSize = 16, edgeSize = 16,
+	insets = { left = 3, right = 3, top = 3, bottom = 3 }
+}
+
+local function Control_OnEnter(this)
+	this.obj:Fire("OnEnter")
+end
+
+local function Control_OnLeave(this)
+	this.obj:Fire("OnLeave")
+end
+
+-------------
+-- Widgets --
+-------------
+--[[
+	Widgets must provide the following functions
+		Aquire() - Called when the object is aquired, should set everything to a default hidden state
+		Release() - Called when the object is Released, should remove any anchors and hide the Widget
+		
+	And the following members
+		frame - the frame or derivitive object that will be treated as the widget for size and anchoring purposes
+		type - the type of the object, same as the name given to :RegisterWidget()
+		
+	Widgets contain a table called userdata, this is a safe place to store data associated with the wigdet
+	It will be cleared automatically when a widget is released
+	Placing values directly into a widget object should be avoided
+	
+	If the Widget can act as a container for other Widgets the following
+		content - frame or derivitive that children will be anchored to
+		
+	The Widget can supply the following Optional Members
+
+
+]]
+
 --------------------------
 -- Slider  	            --
 --------------------------
 do
 	local Type = "Slider"
-	local Version = 5
 	
-	local function OnAcquire(self)
+	local function Aquire(self)
 		self:SetDisabled(false)
 		self:SetSliderValues(0,100,1)
-		self:SetIsPercent(nil)
 		self:SetValue(0)
 	end
 	
-	local function OnRelease(self)
+	local function Release(self)
 		self.frame:ClearAllPoints()
 		self.frame:Hide()
-		self.slider:EnableMouseWheel(false)
 		self:SetDisabled(false)
-	end
-
-	local function Control_OnEnter(this)
-		this.obj:Fire("OnEnter")
-	end
-	
-	local function Control_OnLeave(this)
-		this.obj:Fire("OnLeave")
-	end
-	
-	local function UpdateText(self)
-		if self.ispercent then
-			self.editbox:SetText((math.floor(self.value*1000+0.5)/10)..'%')
-		else
-			self.editbox:SetText(math.floor(self.value*100+0.5)/100)
-		end
 	end
 	
 	local function Slider_OnValueChanged(this)
@@ -47,8 +86,8 @@ do
 				self:Fire("OnValueChanged", newvalue)
 			end
 			if self.value then
-				local value = self.value
-				UpdateText(self)
+				--this.obj.valuetext:SetText(math.floor(self.value*10)/10)
+				this.obj.editbox:SetText(math.floor(self.value*100)/100)
 			end
 		end
 	end
@@ -56,19 +95,6 @@ do
 	local function Slider_OnMouseUp(this)
 		local self = this.obj
 		self:Fire("OnMouseUp",this:GetValue())
-	end
-	
-	local function Slider_OnMouseWheel(this, v)
-		local self = this.obj
-		if not self.disabled then
-			local value = self.value
-			if v > 0 then
-				value = math.min(value + (self.step or 1),self.max)
-			else
-				value = math.max(value - (self.step or 1), self.min)
-			end
-			self.slider:SetValue(value)
-		end
 	end
 	
 	local function SetDisabled(self, disabled)
@@ -97,7 +123,7 @@ do
 		self.slider.setup = true
 		self.slider:SetValue(value)
 		self.value = value
-		UpdateText(self)
+		self.editbox:SetText(math.floor(self.value*100)/100)
 		self.slider.setup = nil
 	end
 	
@@ -125,25 +151,10 @@ do
 	local function EditBox_OnEnterPressed(this)
 		local self = this.obj
 		local value = this:GetText()
-		if self.ispercent then
-			value = value:gsub('%%','')
-			value = tonumber(value) / 100
-		else
-			value = tonumber(value)
-		end
-		
+		value = tonumber(value)
 		if value then
 			self:Fire("OnMouseUp",value)
 		end
-	end
-	
-	local function SetIsPercent(self, value)
-		self.ispercent = value
-	end
-	
-	local function FrameOnMouseDown(this)
-		this.obj.slider:EnableMouseWheel(true)
-		AceGUI:ClearFocus()
 	end
 	
 	local SliderBackdrop  = {
@@ -158,8 +169,8 @@ do
 		local self = {}
 		self.type = Type
 
-		self.OnRelease = OnRelease
-		self.OnAcquire = OnAcquire
+		self.Release = Release
+		self.Aquire = Aquire
 		
 		self.frame = frame
 		frame.obj = self
@@ -168,12 +179,7 @@ do
 		self.SetValue = SetValue
 		self.SetSliderValues = SetSliderValues
 		self.SetLabel = SetLabel
-		self.SetIsPercent = SetIsPercent
-		
-		self.alignoffset = 25
-		
-		frame:EnableMouse(true)
-		frame:SetScript("OnMouseDown",FrameOnMouseDown)
+
 		self.slider = CreateFrame("Slider",nil,frame)
 		local slider = self.slider
 		slider:SetScript("OnEnter",Control_OnEnter)
@@ -184,9 +190,10 @@ do
 		slider:SetHeight(15)
 		slider:SetHitRectInsets(0,0,-10,0)
 		slider:SetBackdrop(SliderBackdrop)
-		--slider:EnableMouseWheel(true)
-		slider:SetScript("OnMouseWheel", Slider_OnMouseWheel)
-			
+		
+		
+
+		
 		local label = frame:CreateFontString(nil,"OVERLAY","GameFontNormal")
 		label:SetPoint("TOPLEFT",frame,"TOPLEFT",0,0)
 		label:SetPoint("TOPRIGHT",frame,"TOPRIGHT",0,0)
@@ -206,7 +213,7 @@ do
 		editbox:SetFontObject(GameFontHighlightSmall)
 		editbox:SetPoint("TOP",slider,"BOTTOM",0,0)
 		editbox:SetHeight(14)
-		editbox:SetWidth(70)
+		editbox:SetWidth(100)
 		editbox:SetJustifyH("CENTER")
 		editbox:EnableMouse(true)
 		editbox:SetScript("OnEscapePressed",EditBox_OnEscapePressed)
@@ -214,12 +221,9 @@ do
 		self.editbox = editbox
 		editbox.obj = self
 		
-		local bg = editbox:CreateTexture(nil,"BACKGROUND")
-		editbox.bg = bg
-		bg:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
-		bg:SetVertexColor(0,0,0,0.25)
-		bg:SetAllPoints(editbox)
-		
+		--self.valuetext = slider:CreateFontString(nil,"ARTWORK","GameFontHighlightSmall")
+		--self.valuetext:SetPoint("TOP",slider,"BOTTOM",0,3)
+	
 		slider:SetThumbTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
 	
 		frame:SetWidth(200)
@@ -232,9 +236,14 @@ do
 		slider:SetValue(self.value or 0)
 		slider:SetScript("OnValueChanged",Slider_OnValueChanged)
 	
+		--Container Support
+		--local content = CreateFrame("Frame",nil,frame)
+		--self.content = content
+		
+		--AceGUI:RegisterAsContainer(self)
 		AceGUI:RegisterAsWidget(self)
 		return self
 	end
 	
-	AceGUI:RegisterWidgetType(Type,Constructor,Version)
+	AceGUI:RegisterWidgetType(Type,Constructor)
 end
