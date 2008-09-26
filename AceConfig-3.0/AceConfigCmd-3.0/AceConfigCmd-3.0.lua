@@ -13,7 +13,7 @@ REQUIRES: AceConsole-3.0 for command registration (loaded on demand)
 -- TODO: plugin args
 
 
-local MAJOR, MINOR = "AceConfigCmd-3.0", 6
+local MAJOR, MINOR = "AceConfigCmd-3.0", 2
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 
 if not lib then return end
@@ -73,8 +73,6 @@ local function callmethod(info, inputpos, tab, methodtype, ...)
 	end
 
 	info.arg = tab.arg
-	info.option = tab
-	info.type = tab.type
 
 	if type(method)=="function" then
 		return method(info, ...)
@@ -94,8 +92,6 @@ local function callfunction(info, tab, methodtype, ...)
 	local method = tab[methodtype]
 
 	info.arg = tab.arg
-	info.option = tab
-	info.type = tab.type
 	
 	if type(method)=="function" then
 		return method(info, ...)
@@ -167,7 +163,7 @@ end
 
 local function showhelp(info, inputpos, tab, noHead)
 	if not noHead then
-		print("|cff33ff99"..info.appName.."|r: Arguments to |cffffff78/"..info[0].."|r "..strsub(info.input,1,inputpos-1)..":")
+		print(info.appName..": arguments to /"..info[0].." "..strsub(info.input,1,inputpos-1)..":")
 	end
 	
 	local sortTbl = {}	-- [1..n]=name
@@ -206,21 +202,19 @@ local function showhelp(info, inputpos, tab, noHead)
 	
 	for _,k in ipairs(sortTbl) do
 		local v = refTbl[k]
-		if not pickfirstset(v.cmdHidden, v.hidden, false) then
-			-- recursively show all inline groups
-			local name, desc = v.name, v.desc
-			if type(name) == "function" then
-				name = callfunction(info, v, 'name')
-			end
-			if type(desc) == "function" then
-				desc = callfunction(info, v, 'desc')
-			end
-			if v.type == "group" and pickfirstset(v.cmdInline, v.inline, false) then
-				print("  "..(desc or name)..":")
-				showhelp(info, inputpos, v, true)
-			else
-				print("  |cffffff78"..k.."|r - "..(desc or name or ""))
-			end
+		-- recursively show all inline groups
+		local name, desc = v.name, v.desc
+		if type(name) == "function" then
+			name = callfunction(info, v, 'name')
+		end
+		if type(desc) == "function" then
+			desc = callfunction(info, v, 'desc')
+		end
+		if v.type == "group" and pickfirstset(v.cmdInline, v.inline, false) then
+			print("  "..(desc or name)..":")
+			showhelp(info, inputpos, v, true)
+		else
+			print("  "..k.." - "..(desc or name or ""))
 		end
 	end
 end
@@ -310,7 +304,7 @@ local function handle(info, inputpos, tab, depth, retfalse)
 	local oldget,oldget_at = getparam(info,inputpos,tab,depth,"get",functypes,funcmsg)
 	local oldfunc,oldfunc_at = getparam(info,inputpos,tab,depth,"func",functypes,funcmsg)
 	local oldvalidate,oldvalidate_at = getparam(info,inputpos,tab,depth,"validate",functypes,funcmsg)
-	--local oldconfirm,oldconfirm_at = getparam(info,inputpos,tab,depth,"confirm",functypes,funcmsg)
+	local oldconfirm,oldconfirm_at = getparam(info,inputpos,tab,depth,"confirm",functypes,funcmsg)
 	
 	-------------------------------------------------------------------
 	-- Act according to .type of this table
@@ -357,7 +351,7 @@ local function handle(info, inputpos, tab, depth, retfalse)
 			info.get,info.get_at = oldget,oldget_at
 			info.func,info.func_at = oldfunc,oldfunc_at
 			info.validate,info.validate_at = oldvalidate,oldvalidate_at
-			--info.confirm,info.confirm_at = oldconfirm,oldconfirm_at
+			info.confirm,info.confirm_at = oldconfirm,oldconfirm_at
 			return false
 		end
 		
@@ -656,9 +650,6 @@ local function handle(info, inputpos, tab, depth, retfalse)
 
 		do_final(info, inputpos, tab, "set", value)
 
-	elseif tab.type=="description" then
-		------------ description --------------------
-		-- ignore description, GUI config only
 	else
 		err(info, inputpos, "unknown options table item type '"..tostring(tab.type).."'")
 	end
@@ -688,9 +679,7 @@ function lib:HandleCommand(slashcmd, appName, input)
 		options = options,
 		input = input,
 		self = self,
-		handler = self,
-		uiType = "cmd",
-		uiName = MAJOR,
+		handler = self
 	}
 	
 	handle(info, 1, options, 0)  -- (info, inputpos, table, depth)

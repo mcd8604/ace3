@@ -1,4 +1,4 @@
-## Interface: 20400
+## Interface: 20300
 
 ## Title: Lib: Ace3
 ## Notes: AddOn development framework
@@ -15,7 +15,6 @@ AceTimer-3.0\AceTimer-3.0.xml
 AceBucket-3.0\AceBucket-3.0.xml
 AceHook-3.0\AceHook-3.0.xml
 AceDB-3.0\AceDB-3.0.xml
-AceDBOptions-3.0\AceDBOptions-3.0.xml
 AceLocale-3.0\AceLocale-3.0.xml
 AceConsole-3.0\AceConsole-3.0.xml
 AceGUI-3.0\AceGUI-3.0.xml

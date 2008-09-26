@@ -11,18 +11,25 @@ local AceGUI = LibStub("AceGUI-3.0")
 ]]
 do
 	local Type = "EditBox"
-	local Version = 8
-
-	local function OnAcquire(self)
+	local Version = 1
+	
+	local function Aquire(self)
 		self:SetDisabled(false)
 		self.showbutton = true
 	end
 	
-	local function OnRelease(self)
+	local function Release(self)
 		self.frame:ClearAllPoints()
 		self.frame:Hide()
 		self:SetDisabled(false)
 	end
+
+	local ControlBackdrop  = {
+		bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+		edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+		tile = true, tileSize = 16, edgeSize = 16,
+		insets = { left = 3, right = 3, top = 3, bottom = 3 }
+	}
 	
 	local function Control_OnEnter(this)
 		this.obj:Fire("OnEnter")
@@ -39,13 +46,13 @@ do
 	local function ShowButton(self)
 		if self.showbutton then
 			self.button:Show()
-			self.editbox:SetTextInsets(0,20,3,3)
+			self.editbox:SetTextInsets(5,25,3,3)
 		end
 	end
 	
 	local function HideButton(self)
 		self.button:Hide()
-		self.editbox:SetTextInsets(0,0,3,3)
+		self.editbox:SetTextInsets(5,5,3,3)
 	end
 	
 	local function EditBox_OnEnterPressed(this)
@@ -80,7 +87,6 @@ do
 			ClearCursor()
 		end
 		HideButton(self)
-		AceGUI:ClearFocus()
 	end
 	
 	local function EditBox_OnTextChanged(this)
@@ -99,11 +105,9 @@ do
 			self.editbox:EnableMouse(false)
 			self.editbox:ClearFocus()
 			self.editbox:SetTextColor(0.5,0.5,0.5)
-			self.label:SetTextColor(0.5,0.5,0.5)
 		else
 			self.editbox:EnableMouse(true)
 			self.editbox:SetTextColor(1,1,1)
-			self.label:SetTextColor(1,.82,0)
 		end
 	end
 	
@@ -122,28 +126,25 @@ do
 		if text and text ~= "" then
 			self.label:SetText(text)
 			self.label:Show()
-			self.editbox:SetPoint("TOPLEFT",self.frame,"TOPLEFT",7,-18)
+			self.editbox:SetPoint("TOPLEFT",self.frame,"TOPLEFT",0,-18)
 			self.frame:SetHeight(44)
 		else
 			self.label:SetText("")
 			self.label:Hide()
-			self.editbox:SetPoint("TOPLEFT",self.frame,"TOPLEFT",7,0)
+			self.editbox:SetPoint("TOPLEFT",self.frame,"TOPLEFT",0,0)
 			self.frame:SetHeight(26)
 		end
 	end
-	
 
 	local function Constructor()
-		local num  = AceGUI:GetNextWidgetNum(Type)
 		local frame = CreateFrame("Frame",nil,UIParent)
-		local editbox = CreateFrame("EditBox","AceGUI-3.0EditBox"..num,frame,"InputBoxTemplate")
+		local editbox = CreateFrame("EditBox",nil,frame)
 		
 		local self = {}
 		self.type = Type
-		self.num = num
 
-		self.OnRelease = OnRelease
-		self.OnAcquire = OnAcquire
+		self.Release = Release
+		self.Aquire = Aquire
 
 		self.SetDisabled = SetDisabled
 		self.SetText = SetText
@@ -170,26 +171,30 @@ do
 		editbox:SetScript("OnTextChanged",EditBox_OnTextChanged)
 		editbox:SetScript("OnReceiveDrag", EditBox_OnReceiveDrag)
 		editbox:SetScript("OnMouseDown", EditBox_OnReceiveDrag)
-
-		editbox:SetTextInsets(0,0,3,3)
+		editbox:SetTextInsets(5,5,3,3)
 		editbox:SetMaxLetters(256)
 		
-		editbox:SetPoint("BOTTOMLEFT",frame,"BOTTOMLEFT",6,0)
-		editbox:SetPoint("BOTTOMRIGHT",frame,"BOTTOMRIGHT",0,0)
-		editbox:SetHeight(19)
+
+		editbox:SetBackdrop(ControlBackdrop)
+		editbox:SetBackdropColor(0,0,0)
+		editbox:SetBackdropBorderColor(0.4,0.4,0.4)
 		
-		local label = frame:CreateFontString(nil,"OVERLAY","GameFontNormalSmall")
-		label:SetPoint("TOPLEFT",frame,"TOPLEFT",0,-2)
-		label:SetPoint("TOPRIGHT",frame,"TOPRIGHT",0,-2)
-		label:SetJustifyH("LEFT")
+		editbox:SetPoint("BOTTOMLEFT",frame,"BOTTOMLEFT",0,0)
+		editbox:SetPoint("BOTTOMRIGHT",frame,"BOTTOMRIGHT",0,0)
+		editbox:SetHeight(26)
+		
+		local label = frame:CreateFontString(nil,"OVERLAY","GameFontNormal")
+		label:SetPoint("TOPLEFT",frame,"TOPLEFT",0,0)
+		label:SetPoint("TOPRIGHT",frame,"TOPRIGHT",0,0)
+		label:SetJustifyH("CENTER")
 		label:SetHeight(18)
 		self.label = label
 		
 		local button = CreateFrame("Button",nil,editbox,"UIPanelButtonTemplate")
-		button:SetWidth(40)
+		button:SetWidth(20)
 		button:SetHeight(20)
-		button:SetPoint("RIGHT",editbox,"RIGHT",-2,0)
-		button:SetText(OKAY)
+		button:SetPoint("RIGHT",editbox,"RIGHT",-4,0)
+		button:SetText("OK")
 		button:SetScript("OnClick", Button_OnClick)
 		button:Hide()
 		

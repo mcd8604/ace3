@@ -1,5 +1,29 @@
 local AceGUI = LibStub("AceGUI-3.0")
 
+-------------
+-- Widgets --
+-------------
+--[[
+	Widgets must provide the following functions
+		Aquire() - Called when the object is aquired, should set everything to a default hidden state
+		Release() - Called when the object is Released, should remove any anchors and hide the Widget
+		
+	And the following members
+		frame - the frame or derivitive object that will be treated as the widget for size and anchoring purposes
+		type - the type of the object, same as the name given to :RegisterWidget()
+		
+	Widgets contain a table called userdata, this is a safe place to store data associated with the wigdet
+	It will be cleared automatically when a widget is released
+	Placing values directly into a widget object should be avoided
+	
+	If the Widget can act as a container for other Widgets the following
+		content - frame or derivitive that children will be anchored to
+		
+	The Widget can supply the following Optional Members
+
+
+]]
+
 --[[
 	Selection Group controls all have an interface to select a group for thier contents
 	None of them will auto size to thier contents, and should usually be used with a scrollframe
@@ -16,13 +40,13 @@ local AceGUI = LibStub("AceGUI-3.0")
 ]]
 do
 	local Type = "DropdownGroup"
-	local Version = 9
+	local Version = 1
 	
-	local function OnAcquire(self)
-		self.dropdown:SetText("")
+	local function Aquire(self)
+
 	end
 	
-	local function OnRelease(self)
+	local function Release(self)
 		self.frame:ClearAllPoints()
 		self.frame:Hide()
 		self.dropdown.list = nil
@@ -47,12 +71,12 @@ do
 	local function SelectedGroup(self,event,value)
 		local group = self.parentgroup
 		local status = group.status or group.localstatus
-		status.selected = value
+		status.selectedgroup = value
 		self.parentgroup:Fire("OnGroupSelected", value)
 	end
 	
 	local function SetGroupList(self,list)
-		self.dropdown:SetList(list)
+		self.dropdown.list = list
 	end
 	
 	-- called to set an external table to store status in
@@ -64,13 +88,13 @@ do
 	local function SetGroup(self,group)
 		self.dropdown:SetValue(group)
 		local status = self.status or self.localstatus
-		status.selected = group
+		status.selectedgroup = group
 		self:Fire("OnGroupSelected", group)
 	end
 	
 	local function OnWidthSet(self, width)
 		local content = self.content
-		local contentwidth = width - 26
+		local contentwidth = width - 63
 		if contentwidth < 0 then
 			contentwidth = 0
 		end
@@ -81,7 +105,7 @@ do
 	
 	local function OnHeightSet(self, height)
 		local content = self.content
-		local contentheight = height - 63
+		local contentheight = height - 26
 		if contentheight < 0 then
 			contentheight = 0
 		end
@@ -94,10 +118,10 @@ do
 		local self = {}
 		self.type = Type
 
-		self.OnRelease = OnRelease
-		self.OnAcquire = OnAcquire
-		
+		self.Release = Release
+		self.Aquire = Aquire
 		self.SetTitle = SetTitle
+		
 		self.SetGroupList = SetGroupList
 		self.SetGroup = SetGroup
 		self.SetStatusTable = SetStatusTable
@@ -112,7 +136,7 @@ do
 		
 		frame:SetHeight(100)
 		frame:SetWidth(100)
-		frame:SetFrameStrata("FULLSCREEN_DIALOG")
+		frame:SetFrameStrata("DIALOG")
 		
 		local titletext = frame:CreateFontString(nil,"OVERLAY","GameFontNormal")
 		titletext:SetPoint("TOPLEFT",frame,"TOPLEFT",14,0)
@@ -125,6 +149,7 @@ do
 		
 		local dropdown = AceGUI:Create("Dropdown")
 		self.dropdown = dropdown
+		dropdown:SetStrict(true)
 		dropdown.frame:SetParent(frame)
 		dropdown.parentgroup = self
 		dropdown:SetCallback("OnValueChanged",SelectedGroup)

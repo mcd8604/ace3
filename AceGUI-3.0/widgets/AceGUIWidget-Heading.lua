@@ -5,13 +5,13 @@ local AceGUI = LibStub("AceGUI-3.0")
 --------------------------
 do
 	local Type = "Heading"
-	local Version = 3
+	local Version = 1
 	
-	local function OnAcquire(self)
+	local function Aquire(self)
 		self:SetText("")
 	end
 	
-	local function OnRelease(self)
+	local function Release(self)
 		self.frame:ClearAllPoints()
 		self.frame:Hide()
 	end
@@ -32,8 +32,8 @@ do
 		local self = {}
 		self.type = Type
 		
-		self.OnRelease = OnRelease
-		self.OnAcquire = OnAcquire
+		self.Release = Release
+		self.Aquire = Aquire
 		self.SetText = SetText
 		self.frame = frame
 		frame.obj = self

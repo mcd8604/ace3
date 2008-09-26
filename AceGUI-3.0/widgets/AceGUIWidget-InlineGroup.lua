@@ -6,7 +6,7 @@ local AceGUI = LibStub("AceGUI-3.0")
 -------------
 --[[
 	Widgets must provide the following functions
-		Acquire() - Called when the object is aquired, should set everything to a default hidden state
+		Aquire() - Called when the object is aquired, should set everything to a default hidden state
 		Release() - Called when the object is Released, should remove any anchors and hide the Widget
 		
 	And the following members
@@ -35,14 +35,14 @@ local AceGUI = LibStub("AceGUI-3.0")
 
 do
 	local Type = "InlineGroup"
-	local Version = 4
+	local Version = 1
 	
-	local function OnAcquire(self)
+	local function Aquire(self)
 		self:SetWidth(300)
 		self:SetHeight(100)
 	end
 	
-	local function OnRelease(self)
+	local function Release(self)
 		self.frame:ClearAllPoints()
 		self.frame:Hide()
 	end
@@ -89,8 +89,8 @@ do
 		local self = {}
 		self.type = Type
 
-		self.OnRelease = OnRelease
-		self.OnAcquire = OnAcquire
+		self.Release = Release
+		self.Aquire = Aquire
 		self.SetTitle = SetTitle
 		self.frame = frame
 		self.LayoutFinished = LayoutFinished
@@ -101,7 +101,7 @@ do
 		
 		frame:SetHeight(100)
 		frame:SetWidth(100)
-		frame:SetFrameStrata("FULLSCREEN_DIALOG")
+		frame:SetFrameStrata("DIALOG")
 		
 		local titletext = frame:CreateFontString(nil,"OVERLAY","GameFontNormal")
 		titletext:SetPoint("TOPLEFT",frame,"TOPLEFT",14,0)

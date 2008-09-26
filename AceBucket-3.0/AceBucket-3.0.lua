@@ -9,7 +9,7 @@
 		stopped, and the bucket is only listening for the next event to happen, basicly back in initial state.
 ]]
 
-local MAJOR, MINOR = "AceBucket-3.0", 3
+local MAJOR, MINOR = "AceBucket-3.0", 1
 local AceBucket, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
 
 if not AceBucket then return end -- No Upgrade needed
@@ -134,15 +134,8 @@ local function RegisterBucket(self, event, interval, callback, isMessage)
 	end
 	
 	if type(event) ~= "string" and type(event) ~= "table" then error("Usage: RegisterBucket(event, interval, callback): 'event' - string or table expected.", 3) end
-	if not callback then
-		if type(event) == "string" then
-			callback = event
-		else
-			error("Usage: RegisterBucket(event, interval, callback): cannot omit callback when event is not a string.", 3)
-		end
-	end
 	if not tonumber(interval) then error("Usage: RegisterBucket(event, interval, callback): 'interval' - number expected.", 3) end
-	if type(callback) ~= "string" and type(callback) ~= "function" then error("Usage: RegisterBucket(event, interval, callback): 'callback' - string or function or nil expected.", 3) end
+	if type(callback) ~= "string" and type(callback) ~= "function" then error("Usage: RegisterBucket(event, interval, callback): 'callback' - string or function expected.", 3) end
 	if type(callback) == "string" and type(self[callback]) ~= "function" then error("Usage: RegisterBucket(event, interval, callback): 'callback' - method not found on target object.", 3) end
 	
 	local bucket = next(bucketCache)
@@ -200,7 +193,6 @@ function AceBucket:UnregisterBucket(handle)
 		
 		if bucket.timer then
 			AceTimer.CancelTimer(bucket, bucket.timer)
-			bucket.timer = nil
 		end
 		
 		AceBucket.buckets[handle] = nil

@@ -5,7 +5,7 @@ local AceGUI = LibStub("AceGUI-3.0")
 --------------------------
 do
 	local Type = "Keybinding"
-	local Version = 8
+	local Version = 1
 
 	local ControlBackdrop  = {
 		bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
@@ -42,7 +42,6 @@ do
 				self.waitingForKey = true
 			end
 		end
-		AceGUI:ClearFocus()
 	end
 
 	local ignoreKeys = nil
@@ -97,10 +96,10 @@ do
 		Keybinding_OnKeyDown(this, button)
 	end
 	
-	local function OnAcquire(self)
+	local function Aquire(self)
 	end
 	
-	local function OnRelease(self)
+	local function Release(self)
 		self.frame:ClearAllPoints()
 		self.frame:Hide()
 		self.waitingForKey = nil
@@ -111,10 +110,8 @@ do
 		self.disabled = disabled
 		if disabled then
 			self.button:Disable()
-			self.label:SetTextColor(0.5,0.5,0.5)
 		else
 			self.button:Enable()
-			self.label:SetTextColor(1,1,1)
 		end
 	end
 	
@@ -126,16 +123,14 @@ do
 		self.label:SetText(label or "")
 	end
 
-
 	local function Constructor()
-		local num  = AceGUI:GetNextWidgetNum(Type)
+	
 		local frame = CreateFrame("Frame",nil,UIParent)
 		
-		local button = CreateFrame("Button","AceGUI-3.0 KeybindingButton"..num,frame,"UIPanelButtonTemplate2")
+		local button = CreateFrame("Button",nil,frame,"UIPanelButtonTemplate")
 		
 		local self = {}
 		self.type = Type
-		self.num = num
 
 		local text = button:GetFontString()
 		text:SetPoint("LEFT",button,"LEFT",7,0)
@@ -161,7 +156,7 @@ do
 		
 		self.button = button
 		
-		local label = frame:CreateFontString(nil,"OVERLAY","GameFontHighlight")
+		local label = frame:CreateFontString(nil,"OVERLAY","GameFontNormal")
 		label:SetPoint("TOPLEFT",frame,"TOPLEFT",0,0)
 		label:SetPoint("TOPRIGHT",frame,"TOPRIGHT",0,0)
 		label:SetJustifyH("CENTER")
@@ -172,7 +167,7 @@ do
 		msgframe:SetHeight(30)
 		msgframe:SetBackdrop(ControlBackdrop)
 		msgframe:SetBackdropColor(0,0,0)
-		msgframe:SetFrameStrata("FULLSCREEN_DIALOG")
+		msgframe:SetFrameStrata("DIALOG")
 		msgframe:SetFrameLevel(1000)
 		self.msgframe = msgframe
 		local msg = msgframe:CreateFontString(nil,"OVERLAY","GameFontNormal")
@@ -183,8 +178,8 @@ do
 		msgframe:SetPoint("BOTTOM",button,"TOP",0,0)
 		msgframe:Hide()
 	
-		self.OnRelease = OnRelease
-		self.OnAcquire = OnAcquire
+		self.Release = Release
+		self.Aquire = Aquire
 		self.SetLabel = SetLabel
 		self.SetDisabled = SetDisabled
 		self.SetKey = SetKey

@@ -1,5 +1,5 @@
 --[[ $Id$ ]]
-local ACEDB_MAJOR, ACEDB_MINOR = "AceDB-3.0", 8
+local ACEDB_MAJOR, ACEDB_MINOR = "AceDB-3.0", 2
 local AceDB, oldminor = LibStub:NewLibrary(ACEDB_MAJOR, ACEDB_MINOR)
 
 if not AceDB then return end -- No upgrade needed
@@ -9,7 +9,7 @@ local pairs, next = pairs, next
 local rawget, rawset = rawget, rawset
 local setmetatable = setmetatable
 
-AceDB.db_registry = AceDB.db_registry or {}
+AceDB.db_registry = setmetatable(AceDB.db_registry or {}, {__mode = "k"})
 AceDB.frame = AceDB.frame or CreateFrame("Frame")
 
 local CallbackHandler
@@ -23,15 +23,13 @@ local DBObjectLib = {}
 
 -- Simple shallow copy for copying defaults
 local function copyTable(src, dest)
-	if type(dest) ~= "table" then dest = {} end
-	if type(src) == "table" then
-		for k,v in pairs(src) do
-			if type(v) == "table" then
-				-- try to index the key first so that the metatable creates the defaults, if set, and use that table
-				v = copyTable(v, dest[k])
-			end
-			dest[k] = v
+	if not type(dest) == "table" then dest = {} end
+	for k,v in pairs(src) do
+		if type(v) == "table" then
+			-- try to index the key first so that the metatable creates the defaults, if set, and use that table
+			v = copyTable(v, dest[k])
 		end
+		dest[k] = v
 	end
 	return dest
 end
@@ -51,7 +49,6 @@ local function copyDefaults(dest, src)
 				local mt = {
 					-- This handles the lookup and creation of new subtables
 					__index = function(t,k)
-							if k == nil then return nil end
 							local tbl = {}
 							copyDefaults(tbl, v)
 							rawset(t, k, tbl)
@@ -61,13 +58,13 @@ local function copyDefaults(dest, src)
 				setmetatable(dest, mt)
 				-- handle already existing tables in the SV
 				for dk, dv in pairs(dest) do
-					if not rawget(src, dk) and type(dv) == "table" then
+					if not rawget(src, dk) then
 						copyDefaults(dv, v)
 					end
 				end
 			else
 				-- Values are not tables, so this is just a simple return
-				local mt = {__index = function(t,k) return k~=nil and v or nil end}
+				local mt = {__index = function() return v end}
 				setmetatable(dest, mt)
 			end
 		elseif type(v) == "table" then
@@ -95,12 +92,8 @@ local function removeDefaults(db, defaults, blocker)
 				for key, value in pairs(db) do
 					if type(value) == "table" then
 						-- if the key was not explicitly specified in the defaults table, just strip everything from * and ** tables
-						if defaults[key] == nil and (not blocker or blocker[key] == nil) then
+						if defaults[key] == nil then
 							removeDefaults(value, v)
-							-- if the table is empty afterwards, remove it
-							if not next(value) then
-								db[key] = nil
-							end
 						-- if it was specified, only strip ** content, but block values which were set in the key table
 						elseif k == "**" then 
 							removeDefaults(value, v, defaults[key])
@@ -265,7 +258,6 @@ local function initdb(sv, defaults, defaultProfile, olddb, parent)
 	else
 		-- hack this one in
 		db.RegisterDefaults = DBObjectLib.RegisterDefaults
-		db.ResetProfile = DBObjectLib.ResetProfile
 	end
 	
 	-- Set some properties in the database object
@@ -274,7 +266,6 @@ local function initdb(sv, defaults, defaultProfile, olddb, parent)
 	db.sv = sv
 	--db.sv_name = name
 	db.defaults = defaults
-	db.parent = parent
 	
 	-- store the DB in the registry
 	AceDB.db_registry[db] = true
@@ -349,9 +340,6 @@ function DBObjectLib:SetProfile(name)
 		error("Usage: AceDBObject:SetProfile(name): 'name' - string expected.", 2)
 	end
 	
-	-- changing to the same profile, dont do anything
-	if name == self.keys.profile then return end
-	
 	local oldProfile = self.profile
 	local defaults = self.defaults and self.defaults.profile
 	
@@ -364,15 +352,15 @@ function DBObjectLib:SetProfile(name)
 	self.keys["profile"] = name
 	self.sv.profileKeys[charKey] = name
 
+	-- Callback: OnProfileChanged, database, newProfileKey
+	self.callbacks:Fire("OnProfileChanged", self, name)
+	
 	-- populate to child namespaces
 	if self.children then
 		for _, db in pairs(self.children) do
 			DBObjectLib.SetProfile(db, name)
 		end
 	end
-	
-	-- Callback: OnProfileChanged, database, newProfileKey
-	self.callbacks:Fire("OnProfileChanged", self, name)
 end
 
 -- DBObject:GetProfiles(tbl)
@@ -392,19 +380,16 @@ function DBObjectLib:GetProfiles(tbl)
 		tbl = {}
 	end
 
-	local curProfile = self.keys.profile
-	
 	local i = 0
 	for profileKey in pairs(self.profiles) do
 		i = i + 1
 		tbl[i] = profileKey
-		if curProfile and profileKey == curProfile then curProfile = nil end
 	end
 
 	-- Add the current profile, if it hasn't been created yet
-	if curProfile then
+	if rawget(self, "profile") == nil then
 		i = i + 1
-		tbl[i] = curProfile
+		tbl[i] = self.keys.profile
 	end
 	
 	return tbl, i
@@ -421,7 +406,7 @@ end
 -- name (string) - The name of the profile to be deleted
 --
 -- Deletes a named profile.  This profile must not be the active profile.
-function DBObjectLib:DeleteProfile(name, silent)
+function DBObjectLib:DeleteProfile(name)
 	if type(name) ~= "string" then
 		error("Usage: AceDBObject:DeleteProfile(name): 'name' - string expected.", 2)
 	end
@@ -430,21 +415,20 @@ function DBObjectLib:DeleteProfile(name, silent)
 		error("Cannot delete the active profile in an AceDBObject.", 2)
 	end
 	
-	if not rawget(self.sv.profiles, name) and not silent then
+	if not rawget(self.sv.profiles, name) then
 		error("Cannot delete profile '" .. name .. "'. It does not exist.", 2)
 	end
 	
 	self.sv.profiles[name] = nil
+	-- Callback: OnProfileDeleted, database, profileKey
+	self.callbacks:Fire("OnProfileDeleted", self, name)
 	
 	-- populate to child namespaces
 	if self.children then
 		for _, db in pairs(self.children) do
-			DBObjectLib.DeleteProfile(db, name, true)
+			DBObjectLib.DeleteProfile(db, name)
 		end
 	end
-	
-	-- Callback: OnProfileDeleted, database, profileKey
-	self.callbacks:Fire("OnProfileDeleted", self, name)
 end
 
 -- DBObject:CopyProfile(name)
@@ -452,7 +436,7 @@ end
 --
 -- Copies a named profile into the current profile, overwriting any conflicting
 -- settings.
-function DBObjectLib:CopyProfile(name, silent)
+function DBObjectLib:CopyProfile(name)
 	if type(name) ~= "string" then
 		error("Usage: AceDBObject:CopyProfile(name): 'name' - string expected.", 2)
 	end
@@ -461,7 +445,7 @@ function DBObjectLib:CopyProfile(name, silent)
 		error("Cannot have the same source and destination profiles.", 2)
 	end
 	
-	if not rawget(self.sv.profiles, name) and not silent then
+	if not rawget(self.sv.profiles, name) then
 		error("Cannot copy profile '" .. name .. "'. It does not exist.", 2)
 	end
 	
@@ -473,22 +457,21 @@ function DBObjectLib:CopyProfile(name, silent)
 	
 	copyTable(source, profile)
 	
+	-- Callback: OnProfileCopied, database, sourceProfileKey
+	self.callbacks:Fire("OnProfileCopied", self, name)
+	
 	-- populate to child namespaces
 	if self.children then
 		for _, db in pairs(self.children) do
-			DBObjectLib.CopyProfile(db, name, true)
+			DBObjectLib.CopyProfile(db, name)
 		end
 	end
-	
-	-- Callback: OnProfileCopied, database, sourceProfileKey
-	self.callbacks:Fire("OnProfileCopied", self, name)
 end
 
 -- DBObject:ResetProfile()
--- noChildren (boolean) - if set to true, the reset will not be populated to the child namespaces of this DB object
---
+-- 
 -- Resets the current profile
-function DBObjectLib:ResetProfile(noChildren)
+function DBObjectLib:ResetProfile()
 	local profile = self.profile
 	
 	for k,v in pairs(profile) do
@@ -499,16 +482,16 @@ function DBObjectLib:ResetProfile(noChildren)
 	if defaults then
 		copyDefaults(profile, defaults)
 	end
+
+	-- Callback: OnProfileReset, database
+	self.callbacks:Fire("OnProfileReset", self)
 	
 	-- populate to child namespaces
-	if self.children and not noChildren then
+	if self.children then
 		for _, db in pairs(self.children) do
 			DBObjectLib.ResetProfile(db)
 		end
 	end
-	
-	-- Callback: OnProfileReset, database
-	self.callbacks:Fire("OnProfileReset", self)
 end
 
 -- DBObject:ResetDB(defaultProfile)
@@ -530,6 +513,11 @@ function DBObjectLib:ResetDB(defaultProfile)
 	
 	initdb(sv, self.defaults, defaultProfile, self)
 	
+	-- Callback: OnDatabaseReset, database
+	self.callbacks:Fire("OnDatabaseReset", self)
+	-- Callback: OnProfileChanged, database, profileKey
+	self.callbacks:Fire("OnProfileChanged", self, self.keys["profile"])
+	
 	-- fix the child namespaces
 	if self.children then
 		if not sv.namespaces then sv.namespaces = {} end
@@ -538,11 +526,6 @@ function DBObjectLib:ResetDB(defaultProfile)
 			initdb(sv.namespaces[name], db.defaults, self.keys.profile, db, self)
 		end
 	end
-	
-		-- Callback: OnDatabaseReset, database
-	self.callbacks:Fire("OnDatabaseReset", self)
-	-- Callback: OnProfileChanged, database, profileKey
-	self.callbacks:Fire("OnProfileChanged", self, self.keys["profile"])
 	
 	return self
 end
@@ -612,15 +595,4 @@ function AceDB:New(tbl, defaults, defaultProfile)
 	end
 	
 	return initdb(tbl, defaults, defaultProfile)
-end
-
--- upgrade existing databases
-for db in pairs(AceDB.db_registry) do
-	if not db.parent then
-		for name,func in pairs(DBObjectLib) do
-			db[name] = func
-		end
-	else
-		db.RegisterDefaults = DBObjectLib.RegisterDefaults
-	end
 end

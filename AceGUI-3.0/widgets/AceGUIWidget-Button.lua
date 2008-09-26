@@ -5,12 +5,12 @@ local AceGUI = LibStub("AceGUI-3.0")
 --------------------------
 do
 	local Type = "Button"
-	local Version = 7
+	local Version = 1
 	
-	local function OnAcquire(self)
+	local function Aquire(self)
 	end
 	
-	local function OnRelease(self)
+	local function Release(self)
 		self.frame:ClearAllPoints()
 		self.frame:Hide()
 		self:SetDisabled(false)
@@ -18,7 +18,6 @@ do
 	
 	local function Button_OnClick(this)
 		this.obj:Fire("OnClick")
-		AceGUI:ClearFocus()
 	end
 	
 	local function Button_OnEnter(this)
@@ -43,17 +42,15 @@ do
 	end
 	
 	local function Constructor()
-		local num  = AceGUI:GetNextWidgetNum(Type)
-		local frame = CreateFrame("Button","AceGUI30Button"..num,UIParent,"UIPanelButtonTemplate2")
+		local frame = CreateFrame("Button",nil,UIParent,"UIPanelButtonTemplate")
 		local self = {}
-		self.num = num
 		self.type = Type
 		self.frame = frame
 
 		local text = frame:GetFontString()
 		self.text = text
-		text:SetPoint("LEFT",frame,"LEFT",15,0)
-		text:SetPoint("RIGHT",frame,"RIGHT",-15,0)
+		text:SetPoint("LEFT",frame,"LEFT",15,-1)
+		text:SetPoint("RIGHT",frame,"RIGHT",-15,-1)
 
 		frame:SetScript("OnClick",Button_OnClick)
 		frame:SetScript("OnEnter",Button_OnEnter)
@@ -67,8 +64,8 @@ do
 		frame:SetHeight(24)
 		frame:SetWidth(200)
 	
-		self.OnRelease = OnRelease
-		self.OnAcquire = OnAcquire
+		self.Release = Release
+		self.Aquire = Aquire
 		
 		self.frame = frame
 		frame.obj = self

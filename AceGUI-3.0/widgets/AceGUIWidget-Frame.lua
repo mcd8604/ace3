@@ -10,7 +10,7 @@ local AceGUI = LibStub("AceGUI-3.0")
 ]]
 do
 	local Type = "Frame"
-	local Version = 7
+	local Version = 1
 
 	local FrameBackdrop = {
 		bgFile="Interface\\DialogFrame\\UI-DialogBox-Background",
@@ -30,17 +30,21 @@ do
 		this.obj:Fire("OnClose")
 	end
 	
+	local function frameOnSizeChanged(this)
+		local self = this.obj
+		local status = self.status or self.localstatus
+		status.width = this:GetWidth()
+		status.height = this:GetHeight()
+		status.top = this:GetTop()
+		status.left = this:GetLeft()
+	end
+	
 	local function closeOnClick(this)
 		this.obj:Hide()
 	end
 	
 	local function frameOnMouseDown(this)
-		AceGUI:ClearFocus()
-	end
-	
-	local function titleOnMouseDown(this)
 		this:GetParent():StartMoving()
-		AceGUI:ClearFocus()
 	end
 	
 	local function frameOnMouseUp(this)
@@ -56,21 +60,18 @@ do
 	
 	local function sizerseOnMouseDown(this)
 		this:GetParent():StartSizing("BOTTOMRIGHT")
-		AceGUI:ClearFocus()
 	end
 	
 	local function sizersOnMouseDown(this)
 		this:GetParent():StartSizing("BOTTOM")
-		AceGUI:ClearFocus()
 	end
 	
 	local function sizereOnMouseDown(this)
 		this:GetParent():StartSizing("RIGHT")
-		AceGUI:ClearFocus()
 	end
 	
 	local function sizerOnMouseUp(this)
-		this:GetParent():StopMovingOrSizing()
+		this:GetParent():StopMovingOrSizing() 
 	end
 
 	local function SetTitle(self,title)
@@ -89,13 +90,13 @@ do
 		self.frame:Show()
 	end
 	
-	local function OnAcquire(self)
+	local function Aquire(self)
 		self.frame:SetParent(UIParent)
-		self.frame:SetFrameStrata("FULLSCREEN_DIALOG")
+		self.frame:SetFrameStrata("DIALOG")
 		self:ApplyStatus()
 	end
 	
-	local function OnRelease(self)
+	local function Release(self)
 		self.status = nil
 		for k in pairs(self.localstatus) do
 			self.localstatus[k] = nil
@@ -112,8 +113,8 @@ do
 	local function ApplyStatus(self)
 		local status = self.status or self.localstatus
 		local frame = self.frame
-		self:SetWidth(status.width or 700)
-		self:SetHeight(status.height or 500)
+		frame:SetWidth(status.width or 700)
+		frame:SetHeight(status.height or 500)
 		if status.top and status.left then
 			frame:SetPoint("TOP",UIParent,"BOTTOM",0,status.top)
 			frame:SetPoint("LEFT",UIParent,"LEFT",status.left,0)
@@ -124,7 +125,7 @@ do
 	
 	local function OnWidthSet(self, width)
 		local content = self.content
-		local contentwidth = width - 34
+		local contentwidth = width - 44
 		if contentwidth < 0 then
 			contentwidth = 0
 		end
@@ -143,6 +144,7 @@ do
 		content.height = contentheight
 	end
 	
+
 	local function Constructor()
 		local frame = CreateFrame("Frame",nil,UIParent)
 		local self = {}
@@ -151,8 +153,8 @@ do
 		self.Hide = Hide
 		self.Show = Show
 		self.SetTitle =  SetTitle
-		self.OnRelease = OnRelease
-		self.OnAcquire = OnAcquire
+		self.Release = Release
+		self.Aquire = Aquire
 		self.SetStatusText = SetStatusText
 		self.SetStatusTable = SetStatusTable
 		self.ApplyStatus = ApplyStatus
@@ -169,14 +171,13 @@ do
 		frame:EnableMouse()
 		frame:SetMovable(true)
 		frame:SetResizable(true)
-		frame:SetFrameStrata("FULLSCREEN_DIALOG")
-		frame:SetScript("OnMouseDown", frameOnMouseDown)
+		frame:SetFrameStrata("DIALOG")
 		
 		frame:SetBackdrop(FrameBackdrop)
 		frame:SetBackdropColor(0,0,0,1)
 		frame:SetScript("OnHide",frameOnClose)
 		frame:SetMinResize(400,200)
-		frame:SetToplevel(true)
+		frame:SetScript("OnSizeChanged", frameOnSizeChanged)
 		
 		local closebutton = CreateFrame("Button",nil,frame,"UIPanelButtonTemplate")
 		closebutton:SetScript("OnClick", closeOnClick)
@@ -208,7 +209,7 @@ do
 		local title = CreateFrame("Frame",nil,frame)
 		self.title = title
 		title:EnableMouse()
-		title:SetScript("OnMouseDown",titleOnMouseDown)
+		title:SetScript("OnMouseDown",frameOnMouseDown)
 		title:SetScript("OnMouseUp", frameOnMouseUp)
 		
 		

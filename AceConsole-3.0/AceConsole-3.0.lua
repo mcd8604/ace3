@@ -1,5 +1,5 @@
 --[[ $Id$ ]]
-local MAJOR,MINOR = "AceConsole-3.0", 6
+local MAJOR,MINOR = "AceConsole-3.0", 1
 
 local AceConsole, oldminor = LibStub:NewLibrary(MAJOR, MINOR)
 
@@ -25,7 +25,7 @@ local max = math.max
 function AceConsole:Print(...)
 	local text = ""
 	if self ~= AceConsole then
-		text = "|cff33ff99"..tostring( self ).."|r: "
+		text = tostring( self )..": "
 	end
 
 	local frame = select(1, ...)
@@ -45,15 +45,21 @@ end
 -- command (string) - chat command to be registered WITHOUT leading "/"
 -- func (function|membername) - function to call, or self[membername](self, ...) call
 -- persist (boolean) - false: the command will be soft disabled/enabled when aceconsole is used as a mixin (default: true)
+-- silent (boolean) - don't whine if command already exists, silently fail
 --
 -- Register a simple chat command
-function AceConsole:RegisterChatCommand( command, func, persist )
-	if type(command)~="string" then error([[Usage: AceConsole:RegisterChatCommand( "command", func[, persist ]): 'command' - expected a string]], 2) end
+function AceConsole:RegisterChatCommand( command, func, persist, silent )
+	if type(command)~="string" then error([[Usage: AceConsole:RegisterChatCommand( "command", func[, persist[, silent] ]): 'command' - expected a string]], 2) end
 	
 	if persist==nil then persist=true end	-- I'd rather have my addon's "/addon enable" around if the author screws up. Having some extra slash regged when it shouldnt be isn't as destructive. True is a better default. /Mikk
 	
 	local name = "ACECONSOLE_"..command:upper()
-	
+	if SlashCmdList[name] then
+		if not silent then
+			geterrorhandler()(tostring(self)..": Chat Command '"..command.."' already exists, will not overwrite.")
+		end
+		return
+	end
 	if type( func ) == "string" then
 		SlashCmdList[name] = function(input)
 			self[func](self, input)
@@ -65,7 +71,6 @@ function AceConsole:RegisterChatCommand( command, func, persist )
 	AceConsole.commands[command] = name
 	-- non-persisting commands are registered for enabling disabling
 	if not persist then
-		if not AceConsole.weakcommands[self] then AceConsole.weakcommands[self] = {} end
 		AceConsole.weakcommands[self][command] = func
 	end
 	return true
@@ -158,10 +163,6 @@ function AceConsole:GetArgs(str, numargs, startpos)
 				if not pos then break end
 				
 				pos=strfind(str, "|h", pos+2)	-- second |h
-				if not pos then break end
-			elseif strsub(str,pos, pos+1) == "|T" then
-				-- It's a |T....|t  texture
-				pos=strfind(str, "|t", pos+2)
 				if not pos then break end
 			end
 			

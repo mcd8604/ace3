@@ -1,5 +1,5 @@
 --[[ $Id$ ]]
-local ACEHOOK_MAJOR, ACEHOOK_MINOR = "AceHook-3.0", 4
+local ACEHOOK_MAJOR, ACEHOOK_MINOR = "AceHook-3.0", 1
 local AceHook, oldminor = LibStub:NewLibrary(ACEHOOK_MAJOR, ACEHOOK_MINOR)
 
 if not AceHook then return end -- No upgrade needed
@@ -295,7 +295,7 @@ function AceHook:Unhook(obj, method)
 	
 	local uid
 	if obj then
-		uid = registry[self][obj] and registry[self][obj][method]
+		uid = registry[self][obj][method]
 	else
 		uid = registry[self][method]
 	end
@@ -308,12 +308,6 @@ function AceHook:Unhook(obj, method)
 	actives[uid], handlers[uid] = nil, nil
 	
 	if obj then
-		registry[self][obj][method] = nil
-		registry[self][obj] = next(registry[self][obj]) and registry[self][obj] or nil
-		
-		-- if the hook reference doesnt exist, then its a secure hook, just bail out and dont do any unhooking
-		if not self.hooks[obj] or not self.hooks[obj][method] then return true end
-		
 		if scripts[uid] and obj:GetScript(method) == uid then  -- unhooks scripts
 			obj:SetScript(method, self.hooks[obj][method] ~= donothing and self.hooks[obj][method] or nil)	
 			scripts[uid] = nil
@@ -322,18 +316,17 @@ function AceHook:Unhook(obj, method)
 		end
 		
 		self.hooks[obj][method] = nil
+		registry[self][obj][method] = nil
+		
 		self.hooks[obj] = next(self.hooks[obj]) and self.hooks[obj] or nil
+		registry[self][obj] = next(registry[self][obj]) and registry[self][obj] or nil
 	else
-		registry[self][method] = nil
-		
-		-- if self.hooks[method] doesn't exist, then this is a SecureHook, just bail out
-		if not self.hooks[method] then return true end
-		
 		if self.hooks[method] and _G[method] == uid then -- unhooks functions
 			_G[method] = self.hooks[method]
 		end
 		
 		self.hooks[method] = nil
+		registry[self][method] = nil
 	end
 	return true
 end

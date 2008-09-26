@@ -5,11 +5,9 @@ local AceGUI = LibStub("AceGUI-3.0")
 --------------------------
 do
 	local Type = "ColorPicker"
-	local Version = 9
+	local Version = 1
 	
-	local function OnAcquire(self)
-		self.HasAlpha = false
-		self:SetColor(0,0,0,1)
+	local function Aquire(self)
 	end
 	
 	local function SetLabel(self, text)
@@ -21,7 +19,7 @@ do
 		self.g = g
 		self.b = b
 		self.a = a or 1
-		self.colorSwatch:SetVertexColor(r,g,b,a)
+		self.colorSwatch.texture:SetTexture(r,g,b)
 	end
 
 	local function Control_OnEnter(this)
@@ -31,19 +29,11 @@ do
 	local function Control_OnLeave(this)
 		this.obj:Fire("OnLeave")
 	end
-	
-	local function SetHasAlpha(self, HasAlpha)
-		self.HasAlpha = HasAlpha
-	end
 
 	local function ColorCallback(self,r,g,b,a,isAlpha)
-		if not self.HasAlpha then
-			a = 1
-		end
 		self:SetColor(r,g,b,a)
 		if ColorPickerFrame:IsVisible() then
 			--colorpicker is still open
-
 			self:Fire("OnValueChanged",r,g,b,a)
 		else
 			--colorpicker is closed, color callback is first, ignore it,
@@ -55,10 +45,9 @@ do
 	end
 	
 	local function ColorSwatch_OnClick(this)
-		HideUIPanel(ColorPickerFrame)
 		local self = this.obj
 		if not self.disabled then
-			ColorPickerFrame:SetFrameStrata("FULLSCREEN_DIALOG")
+			ColorPickerFrame:SetFrameStrata("DIALOG")
 			
 			ColorPickerFrame.func = function()
 				local r,g,b = ColorPickerFrame:GetColorRGB()
@@ -66,27 +55,24 @@ do
 				ColorCallback(self,r,g,b,a)
 			end
 			
-			ColorPickerFrame.hasOpacity = self.HasAlpha
+			ColorPickerFrame.hasOpacity = 1
 			ColorPickerFrame.opacityFunc = function()
 				local r,g,b = ColorPickerFrame:GetColorRGB()
 				local a = 1 - OpacitySliderFrame:GetValue()
 				ColorCallback(self,r,g,b,a,true)
 			end
 			local r, g, b, a = self.r, self.g, self.b, self.a
-			if self.HasAlpha then
-				ColorPickerFrame.opacity = 1 - (a or 0)
-			end
+			ColorPickerFrame.opacity = 1 - (a or 0)
 			ColorPickerFrame:SetColorRGB(r, g, b)
 			
 			ColorPickerFrame.cancelFunc = function()
-				ColorCallback(self,r,g,b,a,true)
+				ColorCallback(self,r,g,b,a)
 			end
 			ShowUIPanel(ColorPickerFrame)
 		end
-		AceGUI:ClearFocus()
 	end
 
-	local function OnRelease(self)
+	local function Release(self)
 		self.frame:ClearAllPoints()
 		self.frame:Hide()
 	end
@@ -96,7 +82,7 @@ do
 		if self.disabled then
 			self.text:SetTextColor(0.5,0.5,0.5)
 		else
-			self.text:SetTextColor(1,1,1)
+			self.text:SetTextColor(1,.82,0)
 		end
 	end
 
@@ -105,21 +91,20 @@ do
 		local self = {}
 		self.type = Type
 
-		self.OnRelease = OnRelease
-		self.OnAcquire = OnAcquire
+		self.Release = Release
+		self.Aquire = Aquire
 		
 		self.SetLabel = SetLabel
 		self.SetColor = SetColor
 		self.SetDisabled = SetDisabled
-		self.SetHasAlpha = SetHasAlpha
 		
 		self.frame = frame
 		frame.obj = self
 		
-		local text = frame:CreateFontString(nil,"OVERLAY","GameFontHighlight")
+		local text = frame:CreateFontString(nil,"OVERLAY","GameFontNormal")
 		self.text = text
 		text:SetJustifyH("LEFT")
-		text:SetTextColor(1,1,1)
+		text:SetTextColor(1,.82,0)
 		frame:SetHeight(24)
 		frame:SetWidth(200)
 		text:SetHeight(24)
@@ -129,25 +114,15 @@ do
 	
 		local colorSwatch = frame:CreateTexture(nil, "OVERLAY")
 		self.colorSwatch = colorSwatch
-		colorSwatch:SetWidth(19)
-		colorSwatch:SetHeight(19)
+		colorSwatch:SetWidth(24)
+		colorSwatch:SetHeight(24)
 		colorSwatch:SetTexture("Interface\\ChatFrame\\ChatFrameColorSwatch")
-		local texture = frame:CreateTexture(nil, "BACKGROUND")
+		local texture = frame:CreateTexture(nil, "OVERLAY")
 		colorSwatch.texture = texture
-		texture:SetWidth(16)
-		texture:SetHeight(16)
-		texture:SetTexture(1,1,1)
+		texture:SetTexture(1, 1, 1)
+		texture:SetWidth(13.8)
+		texture:SetHeight(13.8)
 		texture:Show()
-		
-		local checkers = frame:CreateTexture(nil, "BACKGROUND")
-		colorSwatch.checkers = checkers
-		checkers:SetTexture("Tileset\\Generic\\Checkers")
-		checkers:SetDesaturated(true)
-		checkers:SetVertexColor(1,1,1,0.75)
-		checkers:SetTexCoord(.25,0,0.5,.25)
-		checkers:SetWidth(14)
-		checkers:SetHeight(14)
-		checkers:Show()
 	
 		local highlight = frame:CreateTexture(nil, "BACKGROUND")
 		self.highlight = highlight
@@ -157,7 +132,6 @@ do
 		highlight:Hide()
 	
 		texture:SetPoint("CENTER", colorSwatch, "CENTER")
-		checkers:SetPoint("CENTER", colorSwatch, "CENTER")
 		colorSwatch:SetPoint("LEFT", frame, "LEFT", 0, 0)
 		text:SetPoint("LEFT",colorSwatch,"RIGHT",2,0)
 		text:SetPoint("RIGHT",frame,"RIGHT")

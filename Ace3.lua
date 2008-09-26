@@ -71,19 +71,6 @@ function Ace3:Open()
 	frame:Show()
 end
 
-local function RefreshOnUpdate(this)
-	select:SetGroup(selectedgroup)
-	this:SetScript("OnUpdate", nil)
-end
-
-function Ace3:ConfigTableChanged(event, appName)
-	if selectedgroup == appName and frame then
-		frame.frame:SetScript("OnUpdate", RefreshOnUpdate)
-	end
-end
-
-reg.RegisterCallback(Ace3, "ConfigTableChange", "ConfigTableChanged")
-
 function Ace3:PrintCmd(input)
 	input = input:trim():match("^(.-);*$")
 	local func, err = loadstring("LibStub(\"AceConsole-3.0\"):Print(" .. input .. ")")
@@ -95,7 +82,7 @@ function Ace3:PrintCmd(input)
 end
 
 function Ace3:OnInitialize()
-	self:RegisterChatCommand("ace3", function() self:Open() end)
-	self:RegisterChatCommand("rl", function() ReloadUI() end)
+	self:RegisterChatCommand("ace3", function() self:Open() end )
+	self:RegisterChatCommand("rl", function() ReloadUI() end )
 	self:RegisterChatCommand("print", "PrintCmd")
 end

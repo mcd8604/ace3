@@ -6,7 +6,7 @@ TODO: Time out old data rotting around from dead senders? Not a HUGE deal since 
 
 ]]
 
-local MAJOR, MINOR = "AceComm-3.0", 4
+local MAJOR, MINOR = "AceComm-3.0", 3
 	
 local AceComm,oldminor = LibStub:NewLibrary(MAJOR, MINOR)
 
@@ -131,12 +131,10 @@ do
 		local key = prefix.."\t"..distribution.."\t"..sender	-- a unique stream is defined by the prefix + distribution + sender
 		local spool = AceComm.multipart_spool
 		
-		--[[
 		if spool[key] then 
 			lostdatawarning(prefix,sender,"First")
 			-- continue and overwrite
 		end
-		--]]
 		
 		spool[key] = message	-- plain string for now
 	end
@@ -147,7 +145,7 @@ do
 		local olddata = spool[key]
 		
 		if not olddata then
-			--lostdatawarning(prefix,sender,"Next")
+			lostdatawarning(prefix,sender,"Next")
 			return
 		end
 
@@ -168,7 +166,7 @@ do
 		local olddata = spool[key]
 		
 		if not olddata then
-			--lostdatawarning(prefix,sender,"End")
+			lostdatawarning(prefix,sender,"End")
 			return
 		end
 

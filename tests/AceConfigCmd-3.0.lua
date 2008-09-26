@@ -198,7 +198,7 @@ ccmd:HandleCommand("test","testapp","input   hi2u  woo  ")
 -----------------------------------------------------------------------
 
 local seen = {
-  [".*Arguments to.*"]=0,
+  [".*arguments to.*"]=0,
   ["input.*Input Desc"]=0,
   ["toggle.*Toggle Desc"]=0,
   ["plugcmd.*Woohoo"]=0,
