@@ -1,0 +1,6 @@
+package-as: Ace3
+
+ignore:
+ - split.bat
+ - unsplit.bat
+ - tests
